@@ -1,0 +1,161 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Auphere Brand System - Pastel Light Theme */
+    
+    /* Base Colors - Soft Light Palette */
+    --background: 210 40% 98%;
+    --foreground: 222 47% 15%;
+    
+    /* Card & Surface Colors */
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 15%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 15%;
+    
+    /* Primary - Soft Coral/Peach */
+    --primary: 15 85% 75%;
+    --primary-foreground: 222 47% 15%;
+    
+    /* Secondary - Lavender */
+    --secondary: 250 50% 85%;
+    --secondary-foreground: 222 47% 15%;
+    
+    /* Muted - Soft Gray */
+    --muted: 210 30% 92%;
+    --muted-foreground: 222 30% 45%;
+    
+    /* Accent - Soft Mint */
+    --accent: 160 45% 80%;
+    --accent-foreground: 222 47% 15%;
+    
+    /* Semantic Colors */
+    --destructive: 0 70% 75%;
+    --destructive-foreground: 0 70% 25%;
+    
+    --success: 142 50% 70%;
+    --success-foreground: 142 50% 20%;
+    
+    --warning: 38 80% 70%;
+    --warning-foreground: 38 80% 20%;
+    
+    /* Borders & Inputs */
+    --border: 210 30% 88%;
+    --input: 210 30% 88%;
+    --ring: 15 85% 75%;
+    
+    /* Brand Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(15 85% 75%) 0%, hsl(250 50% 85%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(210 40% 98%) 0%, hsl(0 0% 100%) 100%);
+    --gradient-warm: linear-gradient(90deg, hsl(15 85% 75%), hsl(160 45% 80%));
+    
+    /* Shadows */
+    --shadow-glow: 0 0 40px hsl(15 85% 75% / 0.3);
+    --shadow-card: 0 10px 30px -10px hsl(222 47% 15% / 0.15);
+    
+    /* Radius */
+    --radius: 1rem;
+    
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Sidebar Colors */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 15%;
+    --sidebar-primary: 15 85% 75%;
+    --sidebar-primary-foreground: 222 47% 15%;
+    --sidebar-accent: 210 30% 92%;
+    --sidebar-accent-foreground: 222 47% 15%;
+    --sidebar-border: 210 30% 88%;
+    --sidebar-ring: 15 85% 75%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "kern" 1, "liga" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+  
+  body, p, span, div {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fade-in 0.6s ease-out forwards;
+  }
+  
+  .animate-fade-in-delay {
+    animation: fade-in 0.6s ease-out 0.2s forwards;
+    opacity: 0;
+  }
+  
+  .animate-slide-up {
+    animation: slide-up 0.6s ease-out forwards;
+  }
+  
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+  
+  .gradient-text {
+    background: var(--gradient-hero);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Hide scrollbar but keep functionality */
+  .hide-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari and Opera */
+  }
+}
