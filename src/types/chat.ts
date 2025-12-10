@@ -7,6 +7,7 @@ export interface Message {
   content: string;
   places?: Place[];
   plan?: EveningPlan;
+  planSavedId?: string; // ID of the saved plan if it was already saved
   suggestions?: string[];
 }
 

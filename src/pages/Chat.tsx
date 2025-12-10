@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -71,11 +71,15 @@ const Chat = () => {
       content:
         mode === "explore"
           ? "¡Hola! Soy tu asistente AI de Auphere. Dime qué tipo de lugar buscas y te ayudaré a encontrar el sitio perfecto. Por ejemplo: 'Quiero un restaurante romántico con buena pasta' o '¿Dónde puedo ir a tomar algo con amigos esta noche?'"
-          : "¡Perfecto! Voy a ayudarte a crear un plan increíble. Cuéntame: ¿Para cuántas personas? ¿Qué tipo de ambiente buscas? ¿Tienes alguna preferencia de horario o presupuesto?",
+          : "¡Perfecto! Voy a ayudarte a crear un plan completo con múltiples paradas. Para diseñar el mejor itinerario, dime:\n\n• **¿Para cuántas personas?** (ej: 2, 4, grupo grande)\n• **¿Qué tipo de ambiente buscas?** (ej: romántico, energético, tranquilo)\n• **¿En qué ciudad y a qué hora?** (ej: Madrid a las 20:00)\n• **Presupuesto aprox.** (opcional)\n\nTambién puedes decirme todo en una frase: 'Plan romántico para 2 en Madrid a las 20:00, presupuesto 100€'",
       suggestions:
         mode === "explore"
           ? ["Restaurante romántico", "Bar con amigos", "Café tranquilo"]
-          : ["Plan para 2 personas", "Noche energética", "Plan económico"],
+          : [
+              "Plan romántico para 2 en Madrid, 20:00",
+              "Noche energética con 4 amigos en Barcelona",
+              "Plan tranquilo para 2, presupuesto 80€",
+            ],
     }),
     [mode]
   );
@@ -94,6 +98,23 @@ const Chat = () => {
     }
   }, [error]);
 
+  // Function to update a message when plan is saved
+  const handlePlanSaved = useCallback(
+    (messageIndex: number, planId: string) => {
+      setMessages((prev) => {
+        const updated = [...prev];
+        if (updated[messageIndex]) {
+          updated[messageIndex] = {
+            ...updated[messageIndex],
+            planSavedId: planId,
+          };
+        }
+        return updated;
+      });
+    },
+    []
+  );
+
   // Load chat history when selecting an existing chat
   useEffect(() => {
     if (chatHistory && currentChat) {
@@ -103,6 +124,8 @@ const Chat = () => {
         content: msg.content,
         places: msg.places,
         plan: msg.plan as EveningPlan | undefined,
+        // Note: planSavedId should be set when plan is saved, not from history
+        // We'll need to check saved plans to match them
       }));
 
       // Ensure there's at least the assistant greeting if empty
@@ -290,10 +313,10 @@ const Chat = () => {
           "Mejor lugar para bailar",
         ]
       : [
-          "Plan romántico para 2 personas",
-          "Noche energética con amigos",
-          "Plan económico para cenar y beber",
-          "Plan casual para el fin de semana",
+          "Plan romántico para 2 en Madrid, 20:00, presupuesto 120€",
+          "Noche energética con 4 amigos en Barcelona, 21:00",
+          "Plan tranquilo para 2, Madrid, presupuesto 80€",
+          "Itinerario de 3 paradas, ambiente casual, viernes 22:00",
         ];
 
   return (
@@ -368,6 +391,8 @@ const Chat = () => {
                         key={index}
                         message={message}
                         onSuggestionClick={handleSuggestionClick}
+                        onPlanSaved={handlePlanSaved}
+                        messageIndex={index}
                       />
                     ))}
 

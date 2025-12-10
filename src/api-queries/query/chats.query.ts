@@ -25,9 +25,9 @@ export function useChats(limit: number = 50, offset: number = 0) {
   return useQuery({
     queryKey: chatKeys.list(limit, offset),
     queryFn: () => getUserChats(limit, offset),
-    staleTime: 2000, // 2 seconds - faster updates for better UX
-    refetchOnWindowFocus: true, // Refetch when user returns to tab
-    refetchInterval: 5000, // Poll every 5 seconds when actively viewing
+    staleTime: 30000, // 30 seconds - avoid unnecessary refetches
+    refetchOnWindowFocus: false, // Don't auto-refetch on window focus
+    // No refetchInterval - only invalidate when needed (on create/update)
   });
 }
 

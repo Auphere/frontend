@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Message } from "@/types/chat";
 import { API_BASE_URL } from "@/lib/config";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
+import { chatKeys } from "@/api-queries/keys/chats.keys";
 
 const createId = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -31,6 +33,7 @@ interface UseChatResult {
 
 export const useChat = (initialSessionId?: string | null): UseChatResult => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [messages, setMessages] = useState<Message[]>([]);
   const [status, setStatus] = useState<ChatStatus>(null);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -57,23 +60,26 @@ export const useChat = (initialSessionId?: string | null): UseChatResult => {
     }
   }, []);
 
-  const setSessionId = useCallback((newSessionId: string | null) => {
-    if (newSessionId) {
-      setSessionIdState(newSessionId);
-      sessionIdRef.current = newSessionId;
-    } else {
-      const newId = createId();
-      setSessionIdState(null);
-      sessionIdRef.current = newId;
-    }
-    // Reset messages when switching chats
-    setMessages([]);
-    assistantBufferRef.current = "";
-    setStatus(null);
-    setError(null);
-    setIsStreaming(false);
-    cancelStream();
-  }, [cancelStream]);
+  const setSessionId = useCallback(
+    (newSessionId: string | null) => {
+      if (newSessionId) {
+        setSessionIdState(newSessionId);
+        sessionIdRef.current = newSessionId;
+      } else {
+        const newId = createId();
+        setSessionIdState(null);
+        sessionIdRef.current = newId;
+      }
+      // Reset messages when switching chats
+      setMessages([]);
+      assistantBufferRef.current = "";
+      setStatus(null);
+      setError(null);
+      setIsStreaming(false);
+      cancelStream();
+    },
+    [cancelStream]
+  );
 
   useEffect(() => {
     return () => {
@@ -84,9 +90,9 @@ export const useChat = (initialSessionId?: string | null): UseChatResult => {
   useEffect(() => {
     // Only reset if no initial sessionId provided
     if (!initialSessionId && !sessionId) {
-    sessionIdRef.current = createId();
-    assistantBufferRef.current = "";
-    cancelStream();
+      sessionIdRef.current = createId();
+      assistantBufferRef.current = "";
+      cancelStream();
     }
   }, [user?.id, cancelStream, initialSessionId, sessionId]);
 
@@ -194,7 +200,7 @@ export const useChat = (initialSessionId?: string | null): UseChatResult => {
 
         while (true) {
           const { done, value } = await reader.read();
-          
+
           if (done) {
             break;
           }
@@ -205,7 +211,7 @@ export const useChat = (initialSessionId?: string | null): UseChatResult => {
 
           for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
-            
+
             if (!line || line.startsWith(":")) {
               continue;
             }
@@ -219,7 +225,7 @@ export const useChat = (initialSessionId?: string | null): UseChatResult => {
             // Process data
             if (line.startsWith("data:")) {
               const data = line.slice(5).trim();
-              
+
               if (!data) {
                 currentEvent = ""; // Reset event
                 continue;
@@ -236,11 +242,11 @@ export const useChat = (initialSessionId?: string | null): UseChatResult => {
                 } else if (currentEvent === "end") {
                   setStatus(null);
                   setIsStreaming(false);
-                  
+
                   setMessages((prev) => {
                     const next = [...prev];
                     const last = next[next.length - 1];
-                    
+
                     if (last && last.role === "assistant") {
                       next[next.length - 1] = {
                         ...last,
@@ -256,11 +262,14 @@ export const useChat = (initialSessionId?: string | null): UseChatResult => {
                         plan: parsed.plan,
                       });
                     }
-                    
+
                     return next;
                   });
-                  
+
                   assistantBufferRef.current = "";
+
+                  // Invalidate chats list when streaming completes (in case a new chat was created)
+                  queryClient.invalidateQueries({ queryKey: chatKeys.lists() });
                 } else if (currentEvent === "error") {
                   setStatus(null);
                   setIsStreaming(false);
@@ -271,11 +280,11 @@ export const useChat = (initialSessionId?: string | null): UseChatResult => {
                     // End event without explicit event type
                     setStatus(null);
                     setIsStreaming(false);
-                    
+
                     setMessages((prev) => {
                       const next = [...prev];
                       const last = next[next.length - 1];
-                      
+
                       if (last && last.role === "assistant") {
                         next[next.length - 1] = {
                           ...last,
@@ -291,11 +300,16 @@ export const useChat = (initialSessionId?: string | null): UseChatResult => {
                           plan: parsed.plan,
                         });
                       }
-                      
+
                       return next;
                     });
-                    
+
                     assistantBufferRef.current = "";
+
+                    // Invalidate chats list when streaming completes (in case a new chat was created)
+                    queryClient.invalidateQueries({
+                      queryKey: chatKeys.lists(),
+                    });
                   } else if (parsed.content) {
                     // Status or token
                     if (assistantBufferRef.current === "") {
@@ -305,7 +319,7 @@ export const useChat = (initialSessionId?: string | null): UseChatResult => {
                     }
                   }
                 }
-                
+
                 currentEvent = ""; // Reset after processing
               } catch (e) {
                 // Ignore malformed JSON
@@ -320,12 +334,10 @@ export const useChat = (initialSessionId?: string | null): UseChatResult => {
           // Stream was cancelled
           return;
         }
-        
+
         setStatus(null);
         setIsStreaming(false);
-        setError(
-          err.message || "No pudimos conectar con el asistente."
-        );
+        setError(err.message || "No pudimos conectar con el asistente.");
         console.error("Chat stream error:", err);
       } finally {
         if (abortControllerRef.current === abortController) {

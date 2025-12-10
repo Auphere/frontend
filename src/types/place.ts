@@ -113,14 +113,113 @@ export interface Place {
   };
 }
 
+export interface PlanLocation {
+  address: string;
+  zone?: string;
+  lat: number;
+  lng: number;
+  travelTimeFromPreviousMinutes?: number;
+  travelMode?: "walk" | "car" | "public";
+}
+
+export interface PlanTiming {
+  recommendedStart: string;
+  suggestedDurationMinutes: number;
+  estimatedEnd: string;
+  expectedOccupancy?: string;
+  occupancyRecommendation?: string;
+}
+
+export interface PlanDetails {
+  vibes: string[];
+  targetAudience?: string[];
+  music?: string;
+  noiseLevel?: "low" | "medium" | "high";
+  averageSpendPerPerson?: number;
+}
+
+export interface PlanActions {
+  canReserve: boolean;
+  reservationUrl?: string;
+  googleMapsUrl?: string;
+  phone?: string;
+}
+
+export interface PlanAlternative {
+  name: string;
+  reasonNotSelected: string;
+  link?: string;
+}
+
+export interface PlanStopDetailed {
+  stopNumber: number;
+  localId: string;
+  name: string;
+  category: string;
+  typeLabel?: string;
+  timing: PlanTiming;
+  location: PlanLocation;
+  details: PlanDetails;
+  selectionReasons: string[];
+  actions: PlanActions;
+  alternatives?: PlanAlternative[];
+  personalTips?: string[];
+}
+
+export interface BudgetBreakdown {
+  total: number;
+  perPerson: number;
+  withinBudget: boolean;
+  breakdown?: Record<string, number>;
+}
+
+export interface PlanMetrics {
+  vibeMatchPercent?: number;
+  averageVenueRating?: number;
+  successProbabilityLabel?: string;
+}
+
+export interface PlanSummary {
+  totalDuration: string;
+  totalDistanceKm?: number;
+  budget: BudgetBreakdown;
+  metrics?: PlanMetrics;
+}
+
+export interface PlanExecution {
+  date?: string;
+  startTime?: string;
+  durationHours?: number;
+  city?: string;
+  zones?: string[];
+  groupSize?: number;
+  groupComposition?: string;
+}
+
 export interface EveningPlan {
   id: string;
   name: string;
   description: string;
+  category?: string;
+  vibes: string[];
+  tags?: string[];
+  execution?: PlanExecution;
   stops: PlanStop[];
-  totalDuration: number;
-  totalDistance: number;
-  vibe: PlaceVibe;
+  stopsDetailed?: PlanStopDetailed[];
+  summary?: PlanSummary;
+  finalRecommendations?: string[];
+  state?: "draft" | "saved" | "completed";
+  createdAt?: string;
+  updatedAt?: string;
+  executed?: boolean;
+  executionDate?: string;
+  ratingPostExecution?: number;
+  feedback?: string;
+  
+  // Legacy fields
+  totalDuration?: number;
+  totalDistance?: number;
+  vibe?: PlaceVibe;
 }
 
 export interface PlanStop {
