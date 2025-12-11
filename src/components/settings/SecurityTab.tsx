@@ -1,8 +1,14 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,21 +19,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import { z } from 'zod';
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { z } from "zod";
 
 const passwordSchema = z
   .object({
-    currentPassword: z.string().min(6, 'Password must be at least 6 characters'),
-    newPassword: z.string().min(6, 'Password must be at least 6 characters'),
+    currentPassword: z
+      .string()
+      .min(6, "Password must be at least 6 characters"),
+    newPassword: z.string().min(6, "Password must be at least 6 characters"),
     confirmPassword: z.string(),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
     message: "Passwords don't match",
-    path: ['confirmPassword'],
+    path: ["confirmPassword"],
   });
 
 export const SecurityTab = () => {
@@ -36,9 +44,9 @@ export const SecurityTab = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -56,28 +64,28 @@ export const SecurityTab = () => {
       // if (error) throw error;
 
       toast({
-        title: 'Password updated',
-        description: 'Your password has been successfully changed.',
+        title: "Password updated",
+        description: "Your password has been successfully changed.",
       });
 
       // Reset form
       setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast({
-          title: 'Validation error',
+          title: "Validation error",
           description: error.errors[0].message,
-          variant: 'destructive',
+          variant: "destructive",
         });
       } else {
         toast({
-          title: 'Error',
-          description: 'Failed to update password. Please try again.',
-          variant: 'destructive',
+          title: "Error",
+          description: "Failed to update password. Please try again.",
+          variant: "destructive",
         });
       }
     } finally {
@@ -86,26 +94,20 @@ export const SecurityTab = () => {
   };
 
   const handleDeleteAccount = () => {
-    // TODO: SUPABASE INTEGRATION
+    // TODO: AUTH0 INTEGRATION
     // Delete user account from database
     // This should be a separate API endpoint: DELETE /api/v1/auth/account
-    
-    signOut.mutate(undefined, {
-      onSuccess: () => {
-        toast({
-          title: 'Account deleted',
-          description: 'Your account has been permanently deleted.',
-        });
-        navigate('/');
-      },
-      onError: () => {
-        toast({
-          title: 'Error',
-          description: 'Failed to delete account. Please contact support.',
-          variant: 'destructive',
-        });
-      },
+    // Then call Auth0 Management API to delete the user
+
+    // For now, just sign out
+    signOut();
+    toast({
+      title: "Account deletion",
+      description:
+        "Account deletion should be implemented through your backend API.",
+      variant: "destructive",
     });
+    navigate("/");
   };
 
   return (
@@ -113,7 +115,9 @@ export const SecurityTab = () => {
       <Card>
         <CardHeader>
           <CardTitle>Change Password</CardTitle>
-          <CardDescription>Update your password to keep your account secure</CardDescription>
+          <CardDescription>
+            Update your password to keep your account secure
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handlePasswordChange} className="space-y-4">
@@ -124,7 +128,10 @@ export const SecurityTab = () => {
                 type="password"
                 value={passwordData.currentPassword}
                 onChange={(e) =>
-                  setPasswordData({ ...passwordData, currentPassword: e.target.value })
+                  setPasswordData({
+                    ...passwordData,
+                    currentPassword: e.target.value,
+                  })
                 }
                 placeholder="Enter current password"
               />
@@ -137,7 +144,10 @@ export const SecurityTab = () => {
                 type="password"
                 value={passwordData.newPassword}
                 onChange={(e) =>
-                  setPasswordData({ ...passwordData, newPassword: e.target.value })
+                  setPasswordData({
+                    ...passwordData,
+                    newPassword: e.target.value,
+                  })
                 }
                 placeholder="Enter new password"
               />
@@ -150,14 +160,21 @@ export const SecurityTab = () => {
                 type="password"
                 value={passwordData.confirmPassword}
                 onChange={(e) =>
-                  setPasswordData({ ...passwordData, confirmPassword: e.target.value })
+                  setPasswordData({
+                    ...passwordData,
+                    confirmPassword: e.target.value,
+                  })
                 }
                 placeholder="Confirm new password"
               />
             </div>
 
-            <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
-              {isLoading ? 'Updating...' : 'Update Password'}
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full sm:w-auto"
+            >
+              {isLoading ? "Updating..." : "Update Password"}
             </Button>
           </form>
         </CardContent>
@@ -181,8 +198,9 @@ export const SecurityTab = () => {
               <AlertDialogHeader>
                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete your account and
-                  remove all your data from our servers, including saved plans and preferences.
+                  This action cannot be undone. This will permanently delete
+                  your account and remove all your data from our servers,
+                  including saved plans and preferences.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

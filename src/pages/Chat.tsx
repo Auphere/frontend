@@ -27,6 +27,7 @@ import {
   useChatHistory,
 } from "@/api-queries/query/chats.query";
 import { useQueryClient } from "@tanstack/react-query";
+import { chatKeys } from "@/api-queries/keys/chats.keys";
 
 const Chat = () => {
   const [mode, setMode] = useState<ChatMode>("explore");
@@ -41,6 +42,7 @@ const Chat = () => {
     user?.id
   );
   const createChatMutation = useCreateChat();
+  const { data: chatsData } = useChats();
   const { data: chatHistory, isFetching: isFetchingHistory } = useChatHistory(
     currentChat?.id || null,
     50
@@ -137,6 +139,19 @@ const Chat = () => {
     }
   }, [chatHistory, currentChat, initialAssistantMessage, resetConversation]);
 
+  // Watch for newly created chat in chatsData and set it as currentChat
+  useEffect(() => {
+    if (sessionId && !currentChat && chatsData?.chats) {
+      const foundChat = chatsData.chats.find(
+        (chat) => chat.sessionId === sessionId
+      );
+      if (foundChat) {
+        setCurrentChat(foundChat);
+        setIsCreatingChat(false);
+      }
+    }
+  }, [sessionId, currentChat, chatsData]);
+
   // Refresh chat list after streaming completes (in case a new chat was created)
   useEffect(() => {
     if (!isStreaming && sessionId && !currentChat && messages.length > 1) {
@@ -144,28 +159,28 @@ const Chat = () => {
 
       // Force immediate refetch (bypassing staleTime)
       queryClient.invalidateQueries({
-        queryKey: ["chats"],
+        queryKey: chatKeys.lists(),
         refetchType: "active", // Force active queries to refetch immediately
       });
 
       // Poll a few more times to ensure backend has finished saving
       const timer1 = setTimeout(() => {
         queryClient.invalidateQueries({
-          queryKey: ["chats"],
+          queryKey: chatKeys.lists(),
           refetchType: "active",
         });
       }, 500);
 
       const timer2 = setTimeout(() => {
         queryClient.invalidateQueries({
-          queryKey: ["chats"],
+          queryKey: chatKeys.lists(),
           refetchType: "active",
         });
       }, 1000);
 
       const timer3 = setTimeout(() => {
         queryClient.invalidateQueries({
-          queryKey: ["chats"],
+          queryKey: chatKeys.lists(),
           refetchType: "active",
         });
         setIsCreatingChat(false);

@@ -18,14 +18,8 @@ export const Navigation = () => {
   const navigate = useNavigate();
 
   const handleSignOut = () => {
-    signOut.mutate(undefined, {
-      onSuccess: () => {
-        navigate("/");
-      },
-      onError: () => {
-        navigate("/");
-      },
-    });
+    signOut();
+    navigate("/");
   };
 
   return (
@@ -34,32 +28,32 @@ export const Navigation = () => {
         <div className="flex items-center justify-between h-14 sm:h-16 lg:h-20">
           {/* Logo */}
           <Logo />
-          
+
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
-            <a 
-              href="/explore" 
+            <a
+              href="/explore"
               className="font-inter font-medium text-foreground hover:text-primary transition-colors"
             >
               Explore
             </a>
-            <a 
-              href="/chat" 
+            <a
+              href="/chat"
               className="font-inter font-medium text-foreground hover:text-primary transition-colors"
             >
               AI Chat
             </a>
-            <a 
-              href="/planner" 
+            <a
+              href="/planner"
               className="font-inter font-medium text-foreground hover:text-primary transition-colors"
             >
               My Plans
             </a>
-            
+
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button 
+                  <Button
                     variant="outline"
                     className="font-inter font-semibold rounded-lg"
                   >
@@ -68,7 +62,7 @@ export const Navigation = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => navigate('/settings')}>
+                  <DropdownMenuItem onClick={() => navigate("/settings")}>
                     <Settings className="h-4 w-4 mr-2" />
                     Settings
                   </DropdownMenuItem>
@@ -81,17 +75,15 @@ export const Navigation = () => {
               </DropdownMenu>
             ) : (
               <a href="/auth">
-                <Button 
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-inter font-semibold rounded-lg"
-                >
+                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-inter font-semibold rounded-lg">
                   Sign In
                 </Button>
               </a>
             )}
           </div>
-          
+
           {/* Mobile Menu Button */}
-          <button 
+          <button
             className="md:hidden text-foreground p-2 -mr-2 hover:bg-muted/50 rounded-lg transition-colors active:scale-95"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             aria-label="Toggle menu"
@@ -99,32 +91,32 @@ export const Navigation = () => {
             <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>
-        
+
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="md:hidden py-3 sm:py-4 space-y-1 border-t border-border">
-            <a 
-              href="/explore" 
+            <a
+              href="/explore"
               className="block font-inter font-medium text-foreground hover:text-primary hover:bg-muted/50 transition-colors py-2.5 px-3 rounded-lg text-sm sm:text-base"
               onClick={() => setIsMenuOpen(false)}
             >
               Explore
             </a>
-            <a 
-              href="/chat" 
+            <a
+              href="/chat"
               className="block font-inter font-medium text-foreground hover:text-primary hover:bg-muted/50 transition-colors py-2.5 px-3 rounded-lg text-sm sm:text-base"
               onClick={() => setIsMenuOpen(false)}
             >
               AI Chat
             </a>
-            <a 
-              href="/planner" 
+            <a
+              href="/planner"
               className="block font-inter font-medium text-foreground hover:text-primary hover:bg-muted/50 transition-colors py-2.5 px-3 rounded-lg text-sm sm:text-base"
               onClick={() => setIsMenuOpen(false)}
             >
               My Plans
             </a>
-            
+
             {user ? (
               <div className="pt-2 space-y-1">
                 <div className="px-3 py-2 text-sm font-medium text-muted-foreground">
@@ -134,7 +126,7 @@ export const Navigation = () => {
                   variant="outline"
                   className="w-full justify-start"
                   onClick={() => {
-                    navigate('/settings');
+                    navigate("/settings");
                     setIsMenuOpen(false);
                   }}
                 >
@@ -155,7 +147,7 @@ export const Navigation = () => {
               </div>
             ) : (
               <a href="/auth" className="block mt-2">
-                <Button 
+                <Button
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-inter font-semibold rounded-lg h-10 sm:h-11 text-sm sm:text-base"
                   onClick={() => setIsMenuOpen(false)}
                 >

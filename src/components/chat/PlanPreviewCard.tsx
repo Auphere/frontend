@@ -16,10 +16,19 @@ import {
   Navigation,
   ChevronDown,
   ChevronUp,
+  Star,
+  Phone,
+  ExternalLink,
+  Info,
 } from "lucide-react";
 import { EveningPlan } from "@/types/place";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface PlanPreviewCardProps {
   plan: EveningPlan;
@@ -39,7 +48,18 @@ export const PlanPreviewCard = ({
   isDraft = true,
 }: PlanPreviewCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [expandedStops, setExpandedStops] = useState<Set<number>>(new Set());
   const navigate = useNavigate();
+
+  const toggleStop = (index: number) => {
+    const newExpanded = new Set(expandedStops);
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index);
+    } else {
+      newExpanded.add(index);
+    }
+    setExpandedStops(newExpanded);
+  };
 
   const handleSave = () => {
     if (onSave) {

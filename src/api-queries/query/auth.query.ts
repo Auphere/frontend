@@ -15,15 +15,17 @@ import type {
 
 /**
  * Query: Get current user
- * Fetches the authenticated user's data
+ * NOTE: This is disabled when using Auth0 since user data comes from Auth0Provider
+ * Fetches the authenticated user's data from backend (if needed for additional user data)
  */
 export function useCurrentUser() {
   return useQuery({
     queryKey: authKeys.me(),
     queryFn: authApi.getCurrentUser,
     retry: false,
-    // Only run if we have a token
-    enabled: !!localStorage.getItem("auth_token"),
+    // Disabled by default - Auth0 provides user data
+    // Enable this only if you need additional user data from your backend
+    enabled: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }

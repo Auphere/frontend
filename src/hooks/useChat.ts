@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Message } from "@/types/chat";
 import { API_BASE_URL } from "@/lib/config";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAuth0 } from "@auth0/auth0-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { chatKeys } from "@/api-queries/keys/chats.keys";
 
@@ -33,6 +34,7 @@ interface UseChatResult {
 
 export const useChat = (initialSessionId?: string | null): UseChatResult => {
   const { user } = useAuth();
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
   const queryClient = useQueryClient();
   const [messages, setMessages] = useState<Message[]>([]);
   const [status, setStatus] = useState<ChatStatus>(null);
@@ -145,13 +147,18 @@ export const useChat = (initialSessionId?: string | null): UseChatResult => {
     async (rawContent: string, mode: "explore" | "plan" = "explore") => {
       const content = rawContent.trim();
       if (!content) return;
-      if (!user) {
+      if (!user || !isAuthenticated) {
         setError("Debes iniciar sesión para usar el chat.");
         return;
       }
-      const token = localStorage.getItem("auth_token");
-      if (!token) {
-        setError("Tu sesión expiró. Ingresa nuevamente.");
+
+      let token: string;
+      try {
+        token = await getAccessTokenSilently();
+      } catch (error) {
+        setError(
+          "No se pudo obtener el token de autenticación. Ingresa nuevamente."
+        );
         return;
       }
 

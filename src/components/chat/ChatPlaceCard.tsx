@@ -35,13 +35,19 @@ export const ChatPlaceCard = ({ place }: ChatPlaceCardProps) => {
   };
 
   // Safe access with defaults (all data is normalized from backend)
-  const imageUrl = place.images?.[0] || "/placeholder.svg";
+  const imageUrl =
+    place.images?.[0] ||
+    "https://images.unsplash.com/photo-1504674900247-0877df9cc836";
   const priceLevel = place.priceLevel || 2;
   const priceLevelText = ["€", "€€", "€€€", "€€€€"][priceLevel - 1] || "€€";
   const rating = place.rating || 0;
   const reviewCount = place.reviewCount || 0;
   const category = place.category || "place";
-  const neighborhood = place.neighborhood || "Zaragoza";
+  // Extract neighborhood from address if not provided
+  const neighborhood =
+    place.neighborhood ||
+    place.address?.split(",")[place.address.split(",").length - 2]?.trim() ||
+    "Madrid";
   const openNow = place.openNow ?? true;
   const crowdLevel = place.crowdLevel || "moderate";
   const description = place.description || "";
@@ -84,9 +90,13 @@ export const ChatPlaceCard = ({ place }: ChatPlaceCardProps) => {
             {rating > 0 && (
               <div className="flex items-center gap-1 flex-shrink-0">
                 <Star className="w-3.5 h-3.5 fill-yellow-500 text-yellow-500" />
-                <span className="font-semibold text-xs">{rating.toFixed(1)}</span>
+                <span className="font-semibold text-xs">
+                  {rating.toFixed(1)}
+                </span>
                 {reviewCount > 0 && (
-                  <span className="text-xs text-muted-foreground">({reviewCount})</span>
+                  <span className="text-xs text-muted-foreground">
+                    ({reviewCount})
+                  </span>
                 )}
               </div>
             )}
@@ -102,7 +112,10 @@ export const ChatPlaceCard = ({ place }: ChatPlaceCardProps) => {
           <div className="flex items-center gap-2 text-xs">
             {crowdLevel && crowdLevelColors[crowdLevel] && (
               <>
-                <Badge variant="outline" className={crowdLevelColors[crowdLevel]}>
+                <Badge
+                  variant="outline"
+                  className={crowdLevelColors[crowdLevel]}
+                >
                   {crowdLevel}
                 </Badge>
                 <span className="text-muted-foreground">•</span>

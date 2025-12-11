@@ -138,7 +138,10 @@ const transformAPIPlaceToDetail = (apiPlace: APIPlace): Place => {
     openNow: apiPlace.isOpen !== false,
     openingHours: apiPlace.openingHours?.weekday_text?.join(", "),
     images,
-    features: [], // TODO: Map from amenities
+    features: (customAttributes.features as string[]) || [],
+    popularTimes:
+      (customAttributes.popular_times as { [key: string]: number }) ||
+      undefined,
     currentStatus: customAttributes.liveMusic
       ? "Live music tonight!"
       : undefined,
@@ -147,9 +150,7 @@ const transformAPIPlaceToDetail = (apiPlace: APIPlace): Place => {
     reviews: reviews.length > 0 ? reviews : undefined,
     phone: apiPlace.phoneNumber,
     website: apiPlace.website,
-    amenities: customAttributes.outdoorSeating
-      ? ["Outdoor Seating"]
-      : undefined,
+    amenities: (customAttributes.amenities as string[]) || undefined,
     weeklyHours: apiPlace.openingHours?.weekday_text
       ? Object.fromEntries(
           apiPlace.openingHours.weekday_text.map((text: string) => {
