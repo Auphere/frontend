@@ -18,7 +18,7 @@ Aplicación frontend de Auphere construida con React, TypeScript, Vite y Shadcn 
 - [Estructura](#estructura)
 - [Componentes](#componentes)
 - [Testing](#testing)
-- [Docker](#docker)
+- [Deploy con AWS Amplify](#deploy-con-aws-amplify)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -71,23 +71,14 @@ El frontend de Auphere proporciona:
 
 ## ✅ **Requisitos Previos**
 
-### **Opción 1: Docker**
-- Docker >= 24.0
-- Docker Compose >= 2.20
-
-### **Opción 2: Local**
-- Node.js 20+
-- npm 10+ (o pnpm/yarn)
+- **Node.js** 20+
+- **npm** 10+ (o pnpm/yarn)
 
 ---
 
 ## 📦 **Instalación**
 
-### **Opción 1: Con Docker (Recomendado)**
-
-Ver [README principal](../README.md) para instrucciones de Docker Compose.
-
-### **Opción 2: Desarrollo Local**
+### **Desarrollo Local**
 
 ```bash
 # Navegar al directorio del frontend
@@ -130,14 +121,14 @@ VITE_ENABLE_DEBUG=true
 
 ### **Tabla de Variables**
 
-| Variable | Descripción | Requerido | Valor por Defecto |
-|----------|-------------|-----------|-------------------|
-| `VITE_API_URL` | URL del Backend API | ✅ | `http://localhost:8000` |
-| `VITE_AUTH0_DOMAIN` | Dominio de Auth0 | ✅ | - |
-| `VITE_AUTH0_CLIENT_ID` | Client ID de Auth0 | ✅ | - |
-| `VITE_AUTH0_AUDIENCE` | API Audience de Auth0 | ✅ | `https://auphere-api` |
-| `VITE_ENABLE_ANALYTICS` | Habilitar analytics | ⚠️ | `false` |
-| `VITE_ENABLE_DEBUG` | Modo debug | ⚠️ | `true` |
+| Variable                | Descripción           | Requerido | Valor por Defecto       |
+| ----------------------- | --------------------- | --------- | ----------------------- |
+| `VITE_API_URL`          | URL del Backend API   | ✅        | `http://localhost:8000` |
+| `VITE_AUTH0_DOMAIN`     | Dominio de Auth0      | ✅        | -                       |
+| `VITE_AUTH0_CLIENT_ID`  | Client ID de Auth0    | ✅        | -                       |
+| `VITE_AUTH0_AUDIENCE`   | API Audience de Auth0 | ✅        | `https://auphere-api`   |
+| `VITE_ENABLE_ANALYTICS` | Habilitar analytics   | ⚠️        | `false`                 |
+| `VITE_ENABLE_DEBUG`     | Modo debug            | ⚠️        | `true`                  |
 
 **⚠️ Nota:** Todas las variables deben comenzar con `VITE_` para ser accesibles en el cliente.
 
@@ -154,22 +145,9 @@ npm run dev
 # La app estará disponible en http://localhost:5173
 ```
 
-### **Con Docker**
-
-```bash
-# Desde la raíz del proyecto
-docker-compose up frontend
-
-# O build y run
-docker build -t auphere-frontend .
-docker run -p 3000:80 auphere-frontend
-```
-
 ### **Verificar que funciona**
 
-Abre tu navegador en:
-- **Desarrollo:** http://localhost:5173
-- **Docker:** http://localhost:3000
+Abre tu navegador en: http://localhost:5173
 
 ---
 
@@ -257,7 +235,7 @@ auphere-frontend/
 ├── tsconfig.json            # TypeScript config
 ├── tailwind.config.js       # Tailwind config
 ├── vite.config.ts           # Vite config
-├── Dockerfile
+├── amplify.yml              # AWS Amplify build config
 └── README.md
 ```
 
@@ -283,23 +261,19 @@ Componentes reutilizables en `src/components/ui/`:
 ### **Componentes Personalizados**
 
 #### **PlaceCard**
-```tsx
-import { PlaceCard } from '@/components/places/PlaceCard'
 
-<PlaceCard
-  place={place}
-  onSelect={() => handleSelect(place.id)}
-/>
+```tsx
+import { PlaceCard } from "@/components/places/PlaceCard";
+
+<PlaceCard place={place} onSelect={() => handleSelect(place.id)} />;
 ```
 
 #### **ChatMessage**
-```tsx
-import { ChatMessage } from '@/components/chat/ChatMessage'
 
-<ChatMessage
-  message={message}
-  isUser={true}
-/>
+```tsx
+import { ChatMessage } from "@/components/chat/ChatMessage";
+
+<ChatMessage message={message} isUser={true} />;
 ```
 
 ---
@@ -310,18 +284,18 @@ import { ChatMessage } from '@/components/chat/ChatMessage'
 
 ```typescript
 // src/api-queries/usePlaces.ts
-import { useQuery } from '@tanstack/react-query'
+import { useQuery } from "@tanstack/react-query";
 
 export const usePlaces = (city: string) => {
   return useQuery({
-    queryKey: ['places', city],
+    queryKey: ["places", city],
     queryFn: () => fetchPlaces(city),
     staleTime: 5 * 60 * 1000, // 5 minutos
-  })
-}
+  });
+};
 
 // Uso en componente
-const { data, isLoading, error } = usePlaces('Zaragoza')
+const { data, isLoading, error } = usePlaces("Zaragoza");
 ```
 
 ---
@@ -332,7 +306,7 @@ const { data, isLoading, error } = usePlaces('Zaragoza')
 
 ```typescript
 // src/main.tsx
-import { Auth0Provider } from '@auth0/auth0-react'
+import { Auth0Provider } from "@auth0/auth0-react";
 
 <Auth0Provider
   domain={import.meta.env.VITE_AUTH0_DOMAIN}
@@ -343,23 +317,23 @@ import { Auth0Provider } from '@auth0/auth0-react'
   }}
 >
   <App />
-</Auth0Provider>
+</Auth0Provider>;
 ```
 
 ### **Protected Routes**
 
 ```typescript
 // src/components/ProtectedRoute.tsx
-import { useAuth0 } from '@auth0/auth0-react'
+import { useAuth0 } from "@auth0/auth0-react";
 
 export const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth0()
-  
-  if (isLoading) return <Loading />
-  if (!isAuthenticated) return <Navigate to="/auth" />
-  
-  return children
-}
+  const { isAuthenticated, isLoading } = useAuth0();
+
+  if (isLoading) return <Loading />;
+  if (!isAuthenticated) return <Navigate to="/auth" />;
+
+  return children;
+};
 ```
 
 ---
@@ -379,30 +353,56 @@ npm run test:e2e
 
 ---
 
-## 🐳 **Docker**
+## 🚀 **Deploy con AWS Amplify**
 
-### **Build**
+El frontend se despliega con AWS Amplify, que se conecta directamente a GitHub y hace deploy automático en cada push a `main`.
+
+### **Configuración Inicial**
+
+1. **Conectar a GitHub:**
+
+   - AWS Console → Amplify → New app → Host web app
+   - Selecciona GitHub y autoriza AWS Amplify
+   - Selecciona el repo `auphere-frontend`
+   - Branch: `main`
+
+2. **Build Settings:**
+
+   - Amplify detecta automáticamente el proyecto Vite
+   - Usa el archivo `amplify.yml` del repo (ya incluido)
+   - Verifica que `baseDirectory: dist`
+
+3. **Variables de Entorno:**
+
+   ```bash
+   VITE_API_URL=https://[backend-url].awsapprunner.com
+   VITE_AUTH0_DOMAIN=your-tenant.auth0.com
+   VITE_AUTH0_CLIENT_ID=your-client-id
+   VITE_AUTH0_AUDIENCE=https://auphere-api
+   ```
+
+4. **Configurar Redirects (React Router):**
+   - Amplify → App → Rewrites and redirects → Add rule
+   - Source: `</^[^.]+$|\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|ttf|map|json)$)([^.]+$)/>`
+   - Target: `/index.html`
+   - Type: `200 (Rewrite)`
+
+### **Deploy Automático**
+
+Cada push a `main` activa un deploy automático:
 
 ```bash
-docker build -t auphere-frontend:latest \
-  --build-arg VITE_API_URL=http://localhost:8000 \
-  --build-arg VITE_AUTH0_DOMAIN=your-tenant.auth0.com \
-  --build-arg VITE_AUTH0_CLIENT_ID=your-client-id \
-  --build-arg VITE_AUTH0_AUDIENCE=https://auphere-api \
-  .
+git add .
+git commit -m "Update frontend"
+git push origin main
+# Amplify detecta el cambio y hace deploy automático
 ```
 
-### **Run**
+### **Monitoreo**
 
-```bash
-docker run -p 3000:80 auphere-frontend:latest
-```
-
-### **Dockerfile**
-
-El Dockerfile usa:
-- **Build stage:** Node 20 para compilar
-- **Runtime stage:** NGINX Alpine para servir archivos estáticos
+- **URL del deploy:** `https://main.d[random].amplifyapp.com`
+- **Logs:** AWS Console → Amplify → [App] → Build history
+- **Costo:** ~$1-5/mes (mucho más económico que App Runner)
 
 ---
 
@@ -429,14 +429,14 @@ module.exports = {
     extend: {
       colors: {
         primary: {
-          50: '#f0fdf4',
+          50: "#f0fdf4",
           // ...
-          900: '#14532d',
+          900: "#14532d",
         },
       },
     },
   },
-}
+};
 ```
 
 ---
@@ -453,7 +453,7 @@ El frontend es completamente responsive usando Tailwind breakpoints:
 
 ```tsx
 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-  {places.map(place => (
+  {places.map((place) => (
     <PlaceCard key={place.id} place={place} />
   ))}
 </div>
@@ -535,14 +535,14 @@ npx vite-bundle-visualizer
 
 ## 📝 **Scripts Disponibles**
 
-| Script | Descripción |
-|--------|-------------|
-| `npm run dev` | Servidor de desarrollo |
-| `npm run build` | Build de producción |
-| `npm run build:dev` | Build de desarrollo |
-| `npm run preview` | Preview del build |
-| `npm run lint` | Linter de código |
-| `npm test` | Ejecutar tests |
+| Script              | Descripción            |
+| ------------------- | ---------------------- |
+| `npm run dev`       | Servidor de desarrollo |
+| `npm run build`     | Build de producción    |
+| `npm run build:dev` | Build de desarrollo    |
+| `npm run preview`   | Preview del build      |
+| `npm run lint`      | Linter de código       |
+| `npm test`          | Ejecutar tests         |
 
 ---
 
@@ -570,8 +570,8 @@ npx shadcn-ui@latest add card
 
 ```typescript
 // tsconfig.json configura @ para apuntar a src/
-import { Button } from '@/components/ui/button'
-import { config } from '@/lib/config'
+import { Button } from "@/components/ui/button";
+import { config } from "@/lib/config";
 ```
 
 ### **Hot Module Replacement (HMR)**
