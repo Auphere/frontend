@@ -20,7 +20,8 @@ if (
   !domain.includes(".auth0.com") &&
   !domain.includes(".us.auth0.com") &&
   !domain.includes(".eu.auth0.com") &&
-  !domain.includes(".au.auth0.com")
+  !domain.includes(".au.auth0.com") &&
+  !domain.includes("auth.auphere.com")
 ) {
   console.warn(
     "Auth0 domain format might be incorrect. Expected format: your-domain.auth0.com"
