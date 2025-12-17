@@ -5,6 +5,7 @@ import "./index.css";
 
 const domain = import.meta.env.VITE_AUTH0_DOMAIN;
 const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
+const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
 
 // Validate Auth0 configuration
 if (!domain || !clientId) {
@@ -39,7 +40,7 @@ createRoot(rootElement).render(
     clientId={clientId}
     authorizationParams={{
       redirect_uri: window.location.origin,
-      audience: "https://auphere-api",
+      audience,
       scope: "openid profile email offline_access",
     }}
     cacheLocation="localstorage"
