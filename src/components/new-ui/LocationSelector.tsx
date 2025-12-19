@@ -7,14 +7,13 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { Z_INDEX } from "@/lib/z-index";
 import { STORAGE_KEYS, API_LIMITS } from "@/lib/constants";
-
-// Google Places Autocomplete
-declare global {
-  interface Window {
-    google: any;
-    initGooglePlaces: () => void;
-  }
-}
+import {
+  useAutocompletePredictions,
+  usePlaceDetailsGeocode,
+  useReverseGeocode,
+  transformPredictionToLocation,
+  extractCityFromGeocodingResults,
+} from "@/api-queries/query/geocoding.query";
 
 interface Location {
   id: string;
@@ -55,14 +54,6 @@ const DEFAULT_LOCATIONS: Location[] = [
     image:
       "https://images.unsplash.com/photo-1558642891-54be180ea339?w=200&h=200&fit=crop",
     coordinates: { lat: 41.6488, lng: -0.8891 },
-  },
-  {
-    id: "zaragoza-elgancho",
-    name: "El Gancho",
-    subtitle: "Zaragoza, Aragon, Spain",
-    image:
-      "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=200&h=200&fit=crop",
-    coordinates: { lat: 41.6561, lng: -0.8773 },
   },
 ];
 
@@ -105,104 +96,52 @@ export const LocationSelector = ({
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [recentLocations, setRecentLocations] = useState<Location[]>([]);
-  const [isLoadingGeo, setIsLoadingGeo] = useState(false);
-  const [predictions, setPredictions] = useState<any[]>([]);
+  const [selectedPrediction, setSelectedPrediction] = useState<any>(null);
+  const [geoCoordinates, setGeoCoordinates] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
   const isMobile = useIsMobile();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const autocompleteService = useRef<any>(null);
-  const placesService = useRef<any>(null);
-  const geocoder = useRef<any>(null);
 
   // Load recent locations on mount
   useEffect(() => {
     setRecentLocations(loadRecentLocations());
   }, []);
 
-  // Initialize Google Places API
+  // Debounce search query
   useEffect(() => {
-    const initGooglePlaces = () => {
-      if (window.google && window.google.maps && window.google.maps.places) {
-        autocompleteService.current =
-          new window.google.maps.places.AutocompleteService();
-        // Create a dummy div for PlacesService (required by API)
-        const dummyDiv = document.createElement("div");
-        placesService.current = new window.google.maps.places.PlacesService(
-          dummyDiv
-        );
-        // Initialize Geocoder for reverse geocoding
-        geocoder.current = new window.google.maps.Geocoder();
-      }
-    };
+    const timeoutId = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, API_LIMITS.SEARCH_DEBOUNCE_MS);
 
-    // Load Google Places API script
-    const loadGooglePlacesScript = () => {
-      const apiKey = import.meta.env.VITE_GOOGLE_PLACES_API_KEY;
-      if (!apiKey) {
-        console.warn("Google Places API key not found");
-        return;
-      }
-
-      if (window.google && window.google.maps) {
-        initGooglePlaces();
-        return;
-      }
-
-      const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-      script.async = true;
-      script.defer = true;
-      script.onload = initGooglePlaces;
-      document.head.appendChild(script);
-    };
-
-    loadGooglePlacesScript();
-  }, []);
-
-  // Fetch predictions when search query changes
-  useEffect(() => {
-    if (
-      !searchQuery ||
-      searchQuery.length < API_LIMITS.SEARCH_DEBOUNCE_MS / 100
-    ) {
-      setPredictions([]);
-      return;
-    }
-
-    if (!autocompleteService.current) {
-      return;
-    }
-
-    const fetchPredictions = async () => {
-      try {
-        autocompleteService.current.getPlacePredictions(
-          {
-            input: searchQuery,
-            types: ["(cities)"],
-            // Limit to Spain
-            componentRestrictions: { country: "es" },
-          },
-          (predictions: any, status: any) => {
-            if (status === window.google.maps.places.PlacesServiceStatus.OK) {
-              setPredictions(predictions || []);
-            } else {
-              setPredictions([]);
-            }
-          }
-        );
-      } catch (error) {
-        console.error("Error fetching predictions:", error);
-        setPredictions([]);
-      }
-    };
-
-    const timeoutId = setTimeout(
-      fetchPredictions,
-      API_LIMITS.SEARCH_DEBOUNCE_MS
-    );
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
+
+  // Fetch autocomplete predictions using React Query
+  const { data: autocompleteData, isLoading: isLoadingPredictions } =
+    useAutocompletePredictions(
+      debouncedSearchQuery,
+      debouncedSearchQuery.length >= 2
+    );
+
+  // Get predictions from React Query
+  const predictions = autocompleteData?.predictions || [];
+
+  // Fetch place details when a prediction is selected
+  const { data: placeDetailsData, isLoading: isLoadingPlaceDetails } =
+    usePlaceDetailsGeocode(selectedPrediction?.place_id || null);
+
+  // Fetch reverse geocoding when user uses current location
+  const { data: reverseGeocodeData, isLoading: isLoadingReverseGeocode } =
+    useReverseGeocode(
+      geoCoordinates?.lat || null,
+      geoCoordinates?.lng || null,
+      !!geoCoordinates
+    );
 
   const handleLocationSelect = (location: Location) => {
     onLocationChange(location.name, location.coordinates);
@@ -210,137 +149,37 @@ export const LocationSelector = ({
     setRecentLocations(loadRecentLocations());
     setIsOpen(false);
     setSearchQuery("");
-    setPredictions([]);
+    setDebouncedSearchQuery("");
+    setSelectedPrediction(null);
   };
 
-  // Handle Google Places prediction selection
+  // Handle prediction selection - triggers place details fetch via React Query
   const handlePredictionSelect = (prediction: any) => {
-    if (!placesService.current) return;
-
-    placesService.current.getDetails(
-      {
-        placeId: prediction.place_id,
-        fields: ["name", "geometry", "formatted_address", "photos"],
-      },
-      (place: any, status: any) => {
-        if (status === window.google.maps.places.PlacesServiceStatus.OK) {
-          const location: Location = {
-            id: prediction.place_id,
-            name: place.name || prediction.structured_formatting.main_text,
-            subtitle:
-              prediction.description ||
-              prediction.structured_formatting.secondary_text,
-            coordinates: place.geometry?.location
-              ? {
-                  lat: place.geometry.location.lat(),
-                  lng: place.geometry.location.lng(),
-                }
-              : undefined,
-            image: place.photos?.[0]?.getUrl({ maxWidth: 200, maxHeight: 200 }),
-          };
-
-          handleLocationSelect(location);
-        }
-      }
-    );
+    setSelectedPrediction(prediction);
   };
+
+  // Effect: When place details are loaded, transform and select location
+  useEffect(() => {
+    if (placeDetailsData && selectedPrediction) {
+      const location = transformPredictionToLocation(
+        selectedPrediction,
+        placeDetailsData
+      );
+      handleLocationSelect(location);
+    }
+  }, [placeDetailsData, selectedPrediction]);
 
   const handleUseCurrentLocation = () => {
-    setIsLoadingGeo(true);
-
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
-        async (position) => {
+        (position) => {
           const { latitude, longitude } = position.coords;
-
-          // Reverse geocode to get city name
-          if (geocoder.current) {
-            try {
-              geocoder.current.geocode(
-                {
-                  location: { lat: latitude, lng: longitude },
-                },
-                (results: any, status: any) => {
-                  if (status === "OK" && results && results.length > 0) {
-                    // Find the city name from the results
-                    let cityName = "your location";
-
-                    for (const result of results) {
-                      // Look for locality (city) in address components
-                      const cityComponent = result.address_components.find(
-                        (component: any) =>
-                          component.types.includes("locality") ||
-                          component.types.includes(
-                            "administrative_area_level_2"
-                          )
-                      );
-
-                      if (cityComponent) {
-                        cityName = cityComponent.long_name;
-                        break;
-                      }
-                    }
-
-                    // Call the parent handler if provided
-                    if (onUseCurrentLocation) {
-                      onUseCurrentLocation();
-                    }
-
-                    onLocationChange(cityName, {
-                      lat: latitude,
-                      lng: longitude,
-                    });
-                  } else {
-                    // Fallback if geocoding fails
-                    if (onUseCurrentLocation) {
-                      onUseCurrentLocation();
-                    }
-                    onLocationChange("your location", {
-                      lat: latitude,
-                      lng: longitude,
-                    });
-                  }
-
-                  setIsOpen(false);
-                  setSearchQuery("");
-                  setPredictions([]);
-                  setIsLoadingGeo(false);
-                }
-              );
-            } catch (error) {
-              console.error("Reverse geocoding error:", error);
-              // Fallback
-              if (onUseCurrentLocation) {
-                onUseCurrentLocation();
-              }
-              onLocationChange("your location", {
-                lat: latitude,
-                lng: longitude,
-              });
-              setIsOpen(false);
-              setSearchQuery("");
-              setPredictions([]);
-              setIsLoadingGeo(false);
-            }
-          } else {
-            // Geocoder not available, use coordinates only
-            if (onUseCurrentLocation) {
-              onUseCurrentLocation();
-            }
-            onLocationChange("your location", {
-              lat: latitude,
-              lng: longitude,
-            });
-            setIsOpen(false);
-            setSearchQuery("");
-            setPredictions([]);
-            setIsLoadingGeo(false);
-          }
+          // Set coordinates to trigger React Query reverse geocoding
+          setGeoCoordinates({ lat: latitude, lng: longitude });
         },
         (error) => {
           console.error("Geolocation error:", error);
           alert(t("location.locationError"));
-          setIsLoadingGeo(false);
         },
         {
           enableHighAccuracy: true,
@@ -350,14 +189,40 @@ export const LocationSelector = ({
       );
     } else {
       alert(t("location.geolocationNotSupported"));
-      setIsLoadingGeo(false);
     }
   };
 
+  // Effect: When reverse geocoding is complete, update location
+  useEffect(() => {
+    if (reverseGeocodeData && geoCoordinates) {
+      const cityName =
+        extractCityFromGeocodingResults(reverseGeocodeData.results) ||
+        "your location";
+
+      // Call the parent handler if provided
+      if (onUseCurrentLocation) {
+        onUseCurrentLocation();
+      }
+
+      onLocationChange(cityName, {
+        lat: geoCoordinates.lat,
+        lng: geoCoordinates.lng,
+      });
+
+      setIsOpen(false);
+      setSearchQuery("");
+      setDebouncedSearchQuery("");
+      setGeoCoordinates(null); // Reset to avoid re-triggering
+    }
+  }, [reverseGeocodeData, geoCoordinates]);
+
   // Show Google predictions if searching, otherwise show recent/default locations
   const showPredictions =
-    searchQuery.length >= API_LIMITS.SEARCH_DEBOUNCE_MS / 100 &&
-    predictions.length > 0;
+    debouncedSearchQuery.length >= 2 && predictions.length > 0;
+
+  // Combined loading state
+  const isLoading =
+    isLoadingPredictions || isLoadingPlaceDetails || isLoadingReverseGeocode;
 
   const allLocations = [...recentLocations, ...DEFAULT_LOCATIONS];
   const uniqueLocations = allLocations.filter(
@@ -467,7 +332,7 @@ export const LocationSelector = ({
                 size="icon"
                 onClick={() => {
                   setSearchQuery("");
-                  setPredictions([]);
+                  setDebouncedSearchQuery("");
                 }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full"
               >
@@ -479,18 +344,18 @@ export const LocationSelector = ({
           {/* Use Current Location */}
           <button
             onClick={handleUseCurrentLocation}
-            disabled={isLoadingGeo}
+            disabled={isLoading}
             className="w-full flex items-center gap-4 p-4 hover:bg-muted rounded-xl transition-colors mb-6 disabled:opacity-50"
           >
             <div className="w-12 h-12 bg-muted rounded-xl flex items-center justify-center flex-shrink-0">
-              {isLoadingGeo ? (
+              {isLoading ? (
                 <Loader2 className="w-6 h-6 animate-spin" />
               ) : (
                 <MapPin className="w-6 h-6" />
               )}
             </div>
             <span className="font-medium text-base">
-              {isLoadingGeo
+              {isLoading
                 ? t("location.gettingLocation")
                 : t("location.useCurrentLocation")}
             </span>
