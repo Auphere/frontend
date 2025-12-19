@@ -53,16 +53,31 @@ export function useGeolocation() {
   return { coordinates, error, loading };
 }
 
+// Default coordinates for Madrid, Spain
+const MADRID_COORDINATES = {
+  latitude: 40.4168,
+  longitude: -3.7038,
+};
+
 /**
  * Infinite Query: Search places with pagination
  * Uses React Query's infinite query for scroll-to-load functionality
  */
 export function useInfinitePlaces(filters: PlaceSearchRequest) {
   const normalizedFilters = useMemo(() => {
-    const city = filters.city || config.defaultCity;
+    // Default to Madrid if no city provided AND no coordinates
+    const city = filters.city || config.defaultCity || "Madrid";
+
+    // Only use coordinates if explicitly provided
+    // Don't default to Madrid coordinates - let the backend handle city-based search
+    const latitude = filters.latitude;
+    const longitude = filters.longitude;
+
     return {
       ...filters,
-      city,
+      city: latitude && longitude ? undefined : city, // Only use city if no coordinates
+      latitude,
+      longitude,
       perPage: filters.perPage ?? 20,
     };
   }, [filters]);
@@ -86,7 +101,11 @@ export function useInfinitePlaces(filters: PlaceSearchRequest) {
     gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache for 30 min
     refetchOnWindowFocus: false, // Don't refetch when window regains focus
     refetchOnMount: false, // Don't refetch when component mounts (use cache)
-    enabled: Boolean(normalizedFilters.city),
+    // Enable query if we have either city OR coordinates
+    enabled: Boolean(
+      normalizedFilters.city ||
+        (normalizedFilters.latitude && normalizedFilters.longitude)
+    ),
   });
 }
 

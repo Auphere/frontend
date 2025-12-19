@@ -131,8 +131,8 @@ const mapPhotos = (
     .filter((url): url is string => Boolean(url));
 
   const primary = customAttributes.primaryPhotoUrl as string | undefined;
-  const combined = [primary, ...fromList].filter(
-    (url): url is string => Boolean(url)
+  const combined = [primary, ...fromList].filter((url): url is string =>
+    Boolean(url)
   );
 
   return combined;

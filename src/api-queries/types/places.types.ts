@@ -40,6 +40,9 @@ export interface PlacePhotoResponse {
   id?: string;
   photoUrl?: string;
   thumbnailUrl?: string;
+  // Support both camelCase and snake_case formats
+  photo_url?: string;
+  thumbnail_url?: string;
   width?: number;
   height?: number;
   attribution?: string;
@@ -50,9 +53,13 @@ export interface PlacePhotoResponse {
 export interface PlaceReviewResponse {
   id?: string;
   author?: string;
+  author_name?: string;
   rating?: number;
   text?: string;
+  comment?: string;
   postedAt?: string;
+  posted_at?: string;
+  relative_time_description?: string;
   source?: string;
   sourceId?: string;
 }

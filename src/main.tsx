@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import { Auth0Provider } from "@auth0/auth0-react";
 import App from "./App.tsx";
 import "./index.css";
+import "./i18n/config"; // Initialize i18n
 
 const domain = import.meta.env.VITE_AUTH0_DOMAIN;
 const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;

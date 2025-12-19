@@ -21,12 +21,18 @@ import type {
 /**
  * Get all chats for the current user
  */
-export function useChats(limit: number = 50, offset: number = 0) {
+export function useChats(
+  limit: number = 50,
+  offset: number = 0,
+  options?: { enabled?: boolean }
+) {
   return useQuery({
     queryKey: chatKeys.list(limit, offset),
     queryFn: () => getUserChats(limit, offset),
+    enabled: options?.enabled ?? true, // Only fetch if enabled (user is authenticated and sidebar is open)
     staleTime: 30000, // 30 seconds - avoid unnecessary refetches
     refetchOnWindowFocus: false, // Don't auto-refetch on window focus
+    retry: 1, // Only retry once on failure
     // No refetchInterval - only invalidate when needed (on create/update)
   });
 }
