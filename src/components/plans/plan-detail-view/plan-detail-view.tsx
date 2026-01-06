@@ -1,13 +1,23 @@
-import { ArrowLeft, MapPin, Clock, Euro } from "lucide-react";
+"use client";
+
+import { useState } from "react";
+import { ArrowLeft, MapPin, Clock, Euro, Users, Share2 } from "lucide-react";
 import Link from "next/link";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import type { PlanDetailViewProps } from "./plan-detail-view.interface";
+import { PlanMapView } from "@/components/plan/plan-map-view";
+import { PlanStopsCarousel } from "@/components/plan/plan-stops-carousel";
+import { PlanTimeline } from "@/components/plan/plan-timeline";
 
 export function PlanDetailView({ plan, isLoading }: PlanDetailViewProps) {
+  const [activeStopIndex, setActiveStopIndex] = useState(0);
+
   if (isLoading) {
     return (
-      <div className="h-full flex items-center justify-center">
+      <div className="flex h-full items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-purple border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-purple border-t-transparent" />
           <p className="text-body text-gray-600">Cargando plan...</p>
         </div>
       </div>
@@ -16,17 +26,17 @@ export function PlanDetailView({ plan, isLoading }: PlanDetailViewProps) {
 
   if (!plan) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center max-w-md">
-          <h2 className="text-h4 text-gray-900 mb-2">Plan no encontrado</h2>
-          <p className="text-body text-gray-600 mb-6">
+      <div className="flex h-full items-center justify-center">
+        <div className="max-w-md text-center">
+          <h2 className="text-h4 mb-2 text-gray-900">Plan no encontrado</h2>
+          <p className="text-body mb-6 text-gray-600">
             El plan que buscas no existe o ha sido eliminado
           </p>
           <Link
             href="/plans"
-            className="px-6 py-3 bg-purple text-white rounded-lg font-semibold hover:bg-opacity-90 transition-colors inline-flex items-center gap-2"
+            className="inline-flex items-center gap-2 rounded-lg bg-purple px-6 py-3 font-semibold text-white transition-colors hover:bg-opacity-90"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="h-5 w-5" />
             Volver a planes
           </Link>
         </div>
@@ -34,102 +44,111 @@ export function PlanDetailView({ plan, isLoading }: PlanDetailViewProps) {
     );
   }
 
+  // Get summary data
+  const city = plan.execution?.city || plan.city || "Zaragoza";
+  const totalDuration = plan.summary?.total_duration || "~3h";
+  const budgetPerPerson = plan.summary?.budget?.per_person;
+  const groupSize = plan.execution?.group_size;
+  const totalStops = plan.stops?.length || 0;
+
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex h-full flex-col bg-[#F6F5F4]">
       {/* Header */}
-      <div className="relative">
-        {/* Cover image */}
+      <div className="relative shrink-0">
+        {/* Cover image or gradient */}
         {plan.cover_image_url ? (
           <div
-            className="h-64 bg-cover bg-center"
+            className="h-48 bg-cover bg-center md:h-56"
             style={{ backgroundImage: `url(${plan.cover_image_url})` }}
           />
         ) : (
-          <div className="h-64 bg-gradient-primary" />
+          <div className="h-48 bg-gradient-to-br from-purple via-purple/80 to-blue-500 md:h-56" />
         )}
 
-        {/* Back button */}
-        <Link
-          href="/plans"
-          className="absolute top-4 left-4 p-2 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow"
-        >
-          <ArrowLeft className="w-5 h-5 text-gray-900" />
-        </Link>
-
         {/* Plan info overlay */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6">
-          <h1 className="text-h2 text-white mb-2">{plan.title}</h1>
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 md:p-6">
+          <h1 className="mb-1 text-xl font-bold text-white md:text-2xl">
+            {plan.title}
+          </h1>
           {plan.description && (
-            <p className="text-body text-white/90 mb-3">{plan.description}</p>
+            <p className="mb-3 line-clamp-2 text-sm text-white/90">
+              {plan.description}
+            </p>
           )}
-          <div className="flex items-center gap-4 text-small text-white/90">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-white/90 md:text-sm">
             <div className="flex items-center gap-1">
-              <MapPin className="w-4 h-4" />
-              {plan.city}
+              <MapPin className="h-4 w-4" />
+              {city}
             </div>
             <div className="flex items-center gap-1">
-              <Clock className="w-4 h-4" />
-              {Math.round(plan.total_duration_minutes / 60)}h
+              <Clock className="h-4 w-4" />
+              {totalDuration}
             </div>
-            {plan.estimated_cost && (
+            <div className="flex items-center gap-1">
+              📍 {totalStops} paradas
+            </div>
+            {budgetPerPerson && (
               <div className="flex items-center gap-1">
-                <Euro className="w-4 h-4" />
-                {plan.estimated_cost}€
+                <Euro className="h-4 w-4" />~{budgetPerPerson}€/persona
+              </div>
+            )}
+            {groupSize && (
+              <div className="flex items-center gap-1">
+                <Users className="h-4 w-4" />
+                {groupSize} personas
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 p-6 bg-[#F6F5F4] overflow-auto">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-h3 text-gray-900 mb-4">Itinerario</h2>
-          
-          {plan.days.map((day) => (
-            <div key={day.day_number} className="mb-6">
-              <h3 className="text-h4 text-gray-900 mb-3">
-                Día {day.day_number}
-                {day.date && ` - ${new Date(day.date).toLocaleDateString()}`}
-              </h3>
+      {/* Tabs Content */}
+      <div className="flex-1 overflow-hidden">
+        <Tabs defaultValue="visualization" className="flex h-full flex-col">
+          <TabsList className="mx-4 mt-4 grid w-auto grid-cols-2 bg-gray-200/80">
+            <TabsTrigger
+              value="visualization"
+              className="data-[state=active]:bg-white data-[state=active]:text-purple"
+            >
+              🗺️ Visualización
+            </TabsTrigger>
+            <TabsTrigger
+              value="details"
+              className="data-[state=active]:bg-white data-[state=active]:text-purple"
+            >
+              📋 Detalles
+            </TabsTrigger>
+          </TabsList>
 
-              <div className="space-y-4">
-                {day.events.map((event) => (
-                  <div
-                    key={event.id}
-                    className="bg-white p-4 rounded-lg shadow-sm"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h4 className="text-body font-semibold text-gray-900">
-                          {event.place_name}
-                        </h4>
-                        <p className="text-small text-gray-600">
-                          {event.activity_type}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-body font-semibold text-gray-900">
-                          {event.start_time}
-                        </p>
-                        <p className="text-small text-gray-600">
-                          {event.duration_minutes} min
-                        </p>
-                      </div>
-                    </div>
-                    {event.notes && (
-                      <p className="text-small text-gray-600 mt-2">
-                        {event.notes}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
+          <TabsContent
+            value="visualization"
+            className="mt-0 flex-1 overflow-y-auto p-4"
+          >
+            <div className="space-y-4">
+              {/* Map */}
+              <PlanMapView
+                plan={plan}
+                activeStopIndex={activeStopIndex}
+                onStopClick={(index) => setActiveStopIndex(index)}
+              />
+
+              {/* Stops Carousel */}
+              <PlanStopsCarousel
+                stops={plan.stops || []}
+                activeIndex={activeStopIndex}
+                onCardChange={(index) => setActiveStopIndex(index)}
+              />
             </div>
-          ))}
-        </div>
+          </TabsContent>
+
+          <TabsContent
+            value="details"
+            className="mt-0 flex-1 overflow-y-auto p-4"
+          >
+            <PlanTimeline plan={plan} />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
 }
-

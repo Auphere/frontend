@@ -2,24 +2,37 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { plansAPI } from "@/api-queries/api/plans";
 import { plansKeys } from "@/api-queries/keys/plans";
 import type { Plan } from "@/lib/types";
+import { useAuth } from "@/lib/hooks/use-auth";
 
 // ============================================================================
 // QUERIES
 // ============================================================================
 
-export function usePlansQuery(userId: string) {
+export function usePlansQuery(options?: { state?: "draft" | "saved" | "completed" }) {
+  const { getAccessToken, isAuthenticated } = useAuth();
+
   return useQuery({
-    queryKey: plansKeys.list(userId),
-    queryFn: () => plansAPI.getPlans({ userId }),
-    enabled: !!userId,
+    queryKey: plansKeys.list(options?.state || "all"),
+    queryFn: async () => {
+      const token = await getAccessToken();
+      if (!token) throw new Error("Not authenticated");
+      return plansAPI.getPlans({ token, state: options?.state });
+    },
+    enabled: isAuthenticated,
   });
 }
 
 export function usePlanQuery(planId: string) {
+  const { getAccessToken, isAuthenticated } = useAuth();
+
   return useQuery({
     queryKey: plansKeys.detail(planId),
-    queryFn: () => plansAPI.getPlan({ planId }),
-    enabled: !!planId,
+    queryFn: async () => {
+      const token = await getAccessToken();
+      if (!token) throw new Error("Not authenticated");
+      return plansAPI.getPlan({ planId, token });
+    },
+    enabled: !!planId && isAuthenticated,
   });
 }
 
@@ -33,9 +46,9 @@ export function useCreatePlanMutation() {
   return useMutation({
     mutationFn: plansAPI.createPlan,
     onSuccess: (newPlan) => {
-      // Invalidate plans list for this user
+      // Invalidate all plans lists
       queryClient.invalidateQueries({
-        queryKey: plansKeys.list(newPlan.user_id),
+        queryKey: plansKeys.lists(),
       });
     },
   });
@@ -52,9 +65,9 @@ export function useUpdatePlanMutation() {
         plansKeys.detail(updatedPlan.id),
         updatedPlan
       );
-      // Invalidate plans list
+      // Invalidate plans lists
       queryClient.invalidateQueries({
-        queryKey: plansKeys.list(updatedPlan.user_id),
+        queryKey: plansKeys.lists(),
       });
     },
   });
@@ -65,7 +78,7 @@ export function useDeletePlanMutation() {
 
   return useMutation({
     mutationFn: plansAPI.deletePlan,
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       // Invalidate all plans queries
       queryClient.invalidateQueries({
         queryKey: plansKeys.all,

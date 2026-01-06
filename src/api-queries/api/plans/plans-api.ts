@@ -8,99 +8,99 @@ import type {
   DeletePlanParams,
 } from "./plans-api.interface";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_BACKEND_API_BASE || "http://localhost:8000";
 
-// Mock data for development
-const MOCK_PLANS: Plan[] = [
-  {
-    id: "plan-1",
-    user_id: "user-1",
-    title: "Noche en el Casco Viejo",
-    description: "Ruta de tapas y copas por el centro histórico",
-    city: "Zaragoza",
-    cover_image_url: "https://images.unsplash.com/photo-1514933651103-005eec06c04b",
-    days: [
-      {
-        day_number: 1,
-        date: "2025-01-10",
-        events: [
-          {
-            id: "event-1",
-            order: 1,
-            place_id: "place-1",
-            place_name: "El Plata",
-            place_type: "bar",
-            start_time: "20:00",
-            duration_minutes: 60,
-            activity_type: "drinks",
-            transport_to_next: {
-              type: "walk",
-              duration_minutes: 5,
-              distance_km: 0.3,
-            },
-          },
-          {
-            id: "event-2",
-            order: 2,
-            place_id: "place-2",
-            place_name: "La Miguería",
-            place_type: "restaurant",
-            start_time: "21:00",
-            duration_minutes: 90,
-            activity_type: "dinner",
-          },
-        ],
-      },
-    ],
-    created_at: "2025-01-02T10:00:00Z",
-    updated_at: "2025-01-02T10:00:00Z",
-    is_public: false,
-    total_duration_minutes: 150,
-  },
-];
+// Helper to create axios config with auth
+function authConfig(token: string) {
+  return {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  };
+}
+
+// Transform backend response to frontend Plan type
+function transformBackendPlan(backendPlan: any): Plan {
+  return {
+    id: backendPlan.id,
+    user_id: backendPlan.user_id,
+    title: backendPlan.name, // Backend uses 'name'
+    name: backendPlan.name,
+    description: backendPlan.description || "",
+    category: backendPlan.category,
+    vibes: backendPlan.vibes || [],
+    tags: backendPlan.tags || [],
+    execution: backendPlan.execution || {},
+    stops: backendPlan.stops || [],
+    summary: backendPlan.summary || {
+      total_duration: "0h",
+      budget: { total: 0, per_person: 0, within_budget: true },
+    },
+    final_recommendations: backendPlan.final_recommendations || [],
+    state: backendPlan.state || "saved",
+    created_at: backendPlan.created_at,
+    updated_at: backendPlan.updated_at,
+    // Legacy fields
+    city: backendPlan.execution?.city,
+    estimated_cost: backendPlan.summary?.budget?.total,
+    total_duration_minutes: backendPlan.total_duration,
+  };
+}
 
 export const plansAPI = {
-  getPlans: async ({ userId }: GetPlansParams): Promise<Plan[]> => {
-    // Mock implementation
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return MOCK_PLANS.filter((plan) => plan.user_id === userId);
+  getPlans: async ({ token, state }: GetPlansParams): Promise<Plan[]> => {
+    const params = state ? { state } : {};
+    const { data } = await axios.get(`${API_BASE_URL}/api/v1/plans`, {
+      ...authConfig(token),
+      params,
+    });
+    return data.map(transformBackendPlan);
   },
 
-  getPlan: async ({ planId }: GetPlanParams): Promise<Plan | null> => {
-    // Mock implementation
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return MOCK_PLANS.find((plan) => plan.id === planId) || null;
+  getPlan: async ({ planId, token }: GetPlanParams): Promise<Plan | null> => {
+    try {
+      const { data } = await axios.get(
+        `${API_BASE_URL}/api/v1/plans/${planId}`,
+        authConfig(token)
+      );
+      return transformBackendPlan(data);
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
   },
 
-  createPlan: async (params: CreatePlanParams): Promise<Plan> => {
-    // Mock implementation
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const newPlan: Plan = {
-      id: `plan-${Date.now()}`,
-      user_id: params.userId,
-      title: params.title,
-      description: params.description,
-      city: params.city,
-      days: [],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      is_public: false,
-      total_duration_minutes: 0,
-    };
-    return newPlan;
+  createPlan: async ({ plan, token }: CreatePlanParams): Promise<Plan> => {
+    const { data } = await axios.post(
+      `${API_BASE_URL}/api/v1/plans`,
+      plan,
+      authConfig(token)
+    );
+    return transformBackendPlan(data);
   },
 
-  updatePlan: async ({ planId, updates }: UpdatePlanParams): Promise<Plan> => {
-    // Mock implementation
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const plan = MOCK_PLANS.find((p) => p.id === planId);
-    if (!plan) throw new Error("Plan not found");
-    return { ...plan, ...updates, updated_at: new Date().toISOString() };
+  updatePlan: async ({
+    planId,
+    updates,
+    token,
+  }: UpdatePlanParams): Promise<Plan> => {
+    const { data } = await axios.patch(
+      `${API_BASE_URL}/api/v1/plans/${planId}`,
+      updates,
+      authConfig(token)
+    );
+    return transformBackendPlan(data);
   },
 
-  deletePlan: async ({ planId }: DeletePlanParams): Promise<void> => {
-    // Mock implementation
-    await new Promise((resolve) => setTimeout(resolve, 300));
+  deletePlan: async ({ planId, token }: DeletePlanParams): Promise<void> => {
+    await axios.delete(
+      `${API_BASE_URL}/api/v1/plans/${planId}`,
+      authConfig(token)
+    );
   },
 };
 

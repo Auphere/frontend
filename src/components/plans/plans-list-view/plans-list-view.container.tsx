@@ -1,17 +1,16 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { usePlansQuery } from "@/api-queries/queries/plans";
 import { PlansListView } from "./plans-list-view";
 
 export function PlansListViewContainer() {
-  // Mock user ID - in production this would come from auth
-  const userId = "user-1";
-  
-  const { data: plans = [], isLoading } = usePlansQuery(userId);
+  const router = useRouter();
+  const { data: plans = [], isLoading } = usePlansQuery();
 
   const handleCreatePlan = () => {
-    // TODO: Implement create plan flow
-    console.log("Create plan");
+    // Navigate to chat in plan mode
+    router.push("/chat?mode=plan");
   };
 
   return (

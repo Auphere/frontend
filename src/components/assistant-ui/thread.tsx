@@ -29,11 +29,15 @@ import {
   SquareIcon,
   Sparkles,
   ArrowRightIcon,
+  Compass,
+  CalendarDays,
 } from "lucide-react";
+import { useUIStore } from "@/lib/store/ui-store";
 import Image from "next/image";
 import type { FC } from "react";
 import { PlacesGrid } from "@/components/chat/places-grid";
-import type { Place } from "@/lib/types";
+import { PlanPreviewCard } from "@/components/assistant-ui/plan-preview-card";
+import type { Place, Plan } from "@/lib/types";
 
 export const Thread: FC = () => {
   return (
@@ -194,35 +198,71 @@ const Composer: FC = () => {
 };
 
 const ComposerAction: FC = () => {
-  return (
-    <div className="aui-composer-action-wrapper relative mx-2 mb-2 flex items-center justify-end">
-      <AssistantIf condition={({ thread }) => !thread.isRunning}>
-        <ComposerPrimitive.Send asChild>
-          <Button
-            type="submit"
-            variant="default"
-            size="icon"
-            className="aui-composer-send h-8 w-8 shrink-0 rounded-lg bg-purple hover:bg-purple/90"
-            aria-label="Enviar mensaje"
-          >
-            <ArrowRightIcon className="aui-composer-send-icon h-4 w-4 text-gray-900" />
-          </Button>
-        </ComposerPrimitive.Send>
-      </AssistantIf>
+  const { chatMode, setChatMode } = useUIStore();
+  const isExploreMode = chatMode === "explore";
 
-      <AssistantIf condition={({ thread }) => thread.isRunning}>
-        <ComposerPrimitive.Cancel asChild>
-          <Button
-            type="button"
-            variant="default"
-            size="icon"
-            className="aui-composer-cancel h-8 w-8 shrink-0 rounded-lg bg-gray-600 hover:bg-gray-700"
-            aria-label="Detener generación"
-          >
-            <SquareIcon className="aui-composer-cancel-icon h-3 w-3 fill-current" />
-          </Button>
-        </ComposerPrimitive.Cancel>
-      </AssistantIf>
+  const toggleMode = () => {
+    setChatMode(isExploreMode ? "plan" : "explore");
+  };
+
+  return (
+    <div className="aui-composer-action-wrapper relative mx-2 mb-2 flex items-center justify-between">
+      {/* Mode Toggle Badge */}
+      <button
+        type="button"
+        onClick={toggleMode}
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-200",
+          "border shadow-sm hover:shadow-md active:scale-95",
+          isExploreMode
+            ? "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+            : "border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100"
+        )}
+        aria-label={`Modo actual: ${isExploreMode ? "Explorar" : "Plan"}. Click para cambiar.`}
+      >
+        {isExploreMode ? (
+          <>
+            <Compass className="h-3.5 w-3.5" />
+            <span>Explorar</span>
+          </>
+        ) : (
+          <>
+            <CalendarDays className="h-3.5 w-3.5" />
+            <span>Plan</span>
+          </>
+        )}
+      </button>
+
+      {/* Send/Cancel Buttons */}
+      <div className="flex items-center gap-2">
+        <AssistantIf condition={({ thread }) => !thread.isRunning}>
+          <ComposerPrimitive.Send asChild>
+            <Button
+              type="submit"
+              variant="default"
+              size="icon"
+              className="aui-composer-send h-8 w-8 shrink-0 rounded-lg bg-purple hover:bg-purple/90"
+              aria-label="Enviar mensaje"
+            >
+              <ArrowRightIcon className="aui-composer-send-icon h-4 w-4 text-gray-900" />
+            </Button>
+          </ComposerPrimitive.Send>
+        </AssistantIf>
+
+        <AssistantIf condition={({ thread }) => thread.isRunning}>
+          <ComposerPrimitive.Cancel asChild>
+            <Button
+              type="button"
+              variant="default"
+              size="icon"
+              className="aui-composer-cancel h-8 w-8 shrink-0 rounded-lg bg-gray-600 hover:bg-gray-700"
+              aria-label="Detener generación"
+            >
+              <SquareIcon className="aui-composer-cancel-icon h-3 w-3 fill-current" />
+            </Button>
+          </ComposerPrimitive.Cancel>
+        </AssistantIf>
+      </div>
     </div>
   );
 };
@@ -262,6 +302,7 @@ const AssistantMessageText: FC = () => {
 const AssistantMessage: FC = () => {
   const metadata = useMessage((m) => (m as any).metadata);
   const places = metadata?.custom?.places ?? [];
+  const plan = metadata?.custom?.plan as Plan | null;
 
   return (
     <MessagePrimitive.Root
@@ -286,6 +327,14 @@ const AssistantMessage: FC = () => {
             }}
           />
           <MessageError />
+
+          {/* Renderizar plan preview desde metadata */}
+          {plan && (
+            (plan.stops && plan.stops.length > 0) || 
+            ((plan as any).stopsDetailed && (plan as any).stopsDetailed.length > 0)
+          ) && (
+            <PlanPreviewCard plan={plan} />
+          )}
 
           {/* Renderizar places desde metadata */}
           {places.length > 0 && (

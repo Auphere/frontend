@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { ChatMode } from "@/lib/types";
 
 interface UIStore {
   // Sidebar state
@@ -17,9 +18,9 @@ interface UIStore {
   openPlaceDrawer: (placeId: string) => void;
   closePlaceDrawer: () => void;
 
-  // Chat mode
-  chatMode: "chat" | "planner";
-  setChatMode: (mode: "chat" | "planner") => void;
+  // Chat mode: 'explore' (default) or 'plan'
+  chatMode: ChatMode;
+  setChatMode: (mode: ChatMode) => void;
 
   // Selected plan (for navigation/context)
   selectedPlanId: string | null;
@@ -48,7 +49,7 @@ export const useUIStore = create<UIStore>((set) => ({
     set({ isPlaceDrawerOpen: false, selectedPlaceId: null }),
 
   // Chat mode
-  chatMode: "chat",
+  chatMode: "explore",
   setChatMode: (mode) => set({ chatMode: mode }),
 
   // Selected plan

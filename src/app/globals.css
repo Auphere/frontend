@@ -334,3 +334,29 @@ a {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Scrollbar hide utility for carousel */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+/* Mapbox adjustments */
+.mapboxgl-ctrl-logo {
+  display: none !important;
+}
+
+.mapboxgl-ctrl-attrib {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+@media (max-width: 640px) {
+  .mapboxgl-ctrl-attrib {
+    display: none !important;
+  }
+}

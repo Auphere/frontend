@@ -11,6 +11,8 @@ import type { ReactNode } from "react";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { useMemo, useEffect } from "react";
 import type { ChatHistoryResponse } from "@/api-queries/types/chats.types";
+import { useUIStore } from "@/lib/store/ui-store";
+import type { ChatMode } from "@/lib/types";
 
 interface ChatRuntimeProviderProps {
   children: ReactNode;
@@ -49,11 +51,14 @@ export function ChatRuntimeProvider({
   const agentModelAdapter: ChatModelAdapter = useMemo(
     () => ({
       async *run(options: ChatModelRunOptions) {
+        // Get current chat mode from store at runtime (not at memo time)
+        const currentChatMode = useUIStore.getState().chatMode;
         yield* runAgentWithAuth(
           options,
           user?.sub,
           getAccessToken,
-          isAuthenticated
+          isAuthenticated,
+          currentChatMode
         );
       },
     }),
@@ -85,7 +90,8 @@ async function* runAgentWithAuth(
   { messages, abortSignal }: ChatModelRunOptions,
   userId: string | undefined,
   getAccessToken: () => Promise<string | null>,
-  isAuthenticated: boolean
+  isAuthenticated: boolean,
+  chatMode: ChatMode
 ): AsyncGenerator<ChatModelRunResult> {
   const lastUserMessage = [...messages]
     .reverse()
@@ -114,7 +120,7 @@ async function* runAgentWithAuth(
   const payload = {
     message: userText,
     session_id: sessionId,
-    mode: "explore",
+    mode: chatMode, // 'explore' or 'plan'
     // Note: user_id will be set by backend from Auth0 token
   };
 
