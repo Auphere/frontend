@@ -31,7 +31,8 @@ export function PlanMapView({
   useEffect(() => {
     Promise.all([
       import("react-map-gl/mapbox"),
-      import("mapbox-gl/dist/mapbox-gl.css"),
+      // CSS is optional in some environments/builds; avoid hard-failing.
+      import("mapbox-gl/dist/mapbox-gl.css").catch(() => null),
     ]).then(([mod]) => {
       setMapComponents({
         Map: mod.Map,

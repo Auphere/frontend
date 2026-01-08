@@ -2,10 +2,18 @@
 
 import { useAuth } from "@/lib/hooks/use-auth";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import Image from "next/image";
 
 export default function CallbackPage() {
+  return (
+    <Suspense fallback={<CallbackLoading />}>
+      <CallbackInner />
+    </Suspense>
+  );
+}
+
+function CallbackInner() {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -23,6 +31,12 @@ export default function CallbackPage() {
     }
   }, [isAuthenticated, isLoading, router, searchParams]);
 
+  return (
+    <CallbackLoading />
+  );
+}
+
+function CallbackLoading() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#F6F5F4]">
       <div className="text-center">

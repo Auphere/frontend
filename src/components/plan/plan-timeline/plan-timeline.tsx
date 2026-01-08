@@ -1,6 +1,7 @@
 "use client";
 
 import type { Plan, PlanStop } from "@/lib/types";
+import { useState } from "react";
 import {
   Calendar,
   Clock,
@@ -12,8 +13,21 @@ import {
   Phone,
   ExternalLink,
   Navigation,
+  Trash2,
+  RefreshCw,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useUpdatePlanMutation } from "@/api-queries/queries/plans";
+import { useAuth } from "@/lib/hooks/use-auth";
 
 export interface PlanPreviewProps {
   plan: Plan;
@@ -135,6 +149,115 @@ export function PlanTimeline({ plan }: PlanTimelineProps) {
     );
   }
 
+  const { getAccessToken } = useAuth();
+  const updatePlan = useUpdatePlanMutation();
+  const [isReplaceDialogOpen, setIsReplaceDialogOpen] = useState(false);
+  const [targetStopNumber, setTargetStopNumber] = useState<number | null>(null);
+  const [replaceInstruction, setReplaceInstruction] = useState("");
+  const [replaceQuery, setReplaceQuery] = useState("");
+
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [addInstruction, setAddInstruction] = useState("");
+  const [addQuery, setAddQuery] = useState("");
+  const [addAfterStopNumber, setAddAfterStopNumber] = useState<number | null>(null);
+
+  const [isTimingDialogOpen, setIsTimingDialogOpen] = useState(false);
+  const [timingStopNumber, setTimingStopNumber] = useState<number | null>(null);
+  const [timingStart, setTimingStart] = useState("");
+  const [timingDuration, setTimingDuration] = useState<number>(60);
+
+  const isMutating = updatePlan.isPending;
+
+  async function runAiEdit(aiEdit: Record<string, unknown>) {
+    const token = await getAccessToken();
+    if (!token) throw new Error("Not authenticated");
+    return updatePlan.mutateAsync({
+      planId: plan.id,
+      token,
+      updates: { ai_edit: aiEdit as any },
+    });
+  }
+
+  async function handleRemoveStop(stopNumber: number) {
+    const ok = window.confirm(`¿Eliminar la parada #${stopNumber}?`);
+    if (!ok) return;
+    await runAiEdit({
+      operation: "remove_stop",
+      instruction: `Eliminar la parada #${stopNumber}`,
+      stop_number: stopNumber,
+      constraints: {},
+      language: "es",
+    });
+  }
+
+  function openReplace(stopNumber: number) {
+    setTargetStopNumber(stopNumber);
+    setReplaceInstruction("");
+    setReplaceQuery("");
+    setIsReplaceDialogOpen(true);
+  }
+
+  async function submitReplace() {
+    if (!targetStopNumber) return;
+    const query = replaceQuery.trim();
+    const instruction = replaceInstruction.trim() || "Reemplazar por una mejor opción";
+
+    await runAiEdit({
+      operation: "replace_stop",
+      instruction,
+      stop_number: targetStopNumber,
+      constraints: query ? { query } : {},
+      language: "es",
+    });
+
+    setIsReplaceDialogOpen(false);
+    setTargetStopNumber(null);
+  }
+
+  function openAdd(afterStopNumber?: number) {
+    setAddAfterStopNumber(afterStopNumber ?? null);
+    setAddInstruction("");
+    setAddQuery("");
+    setIsAddDialogOpen(true);
+  }
+
+  async function submitAdd() {
+    const query = addQuery.trim();
+    const instruction = addInstruction.trim() || `Agregar una parada nueva`;
+    await runAiEdit({
+      operation: "add_stop",
+      instruction,
+      stop_number: addAfterStopNumber ?? undefined,
+      constraints: query ? { query } : {},
+      language: "es",
+    });
+    setIsAddDialogOpen(false);
+    setAddAfterStopNumber(null);
+  }
+
+  function openTiming(stopNumber: number, stop: PlanStop) {
+    setTimingStopNumber(stopNumber);
+    setTimingStart(stop.timing?.recommended_start || "");
+    setTimingDuration(stop.timing?.suggested_duration_minutes || 60);
+    setIsTimingDialogOpen(true);
+  }
+
+  async function submitTiming() {
+    if (!timingStopNumber) return;
+    await runAiEdit({
+      operation: "update_timing",
+      instruction: `Actualizar horario de la parada #${timingStopNumber}`,
+      stop_number: timingStopNumber,
+      constraints: {
+        start_time: timingStart || undefined,
+        duration_minutes: timingDuration,
+      },
+      language: "es",
+    });
+    setIsTimingDialogOpen(false);
+    setTimingStopNumber(null);
+  }
+
   return (
     <div className="space-y-6 pb-4">
       {/* Plan summary header */}
@@ -171,12 +294,28 @@ export function PlanTimeline({ plan }: PlanTimelineProps) {
 
       {/* Timeline */}
       <div className="relative">
+        <div className="mb-3 flex items-center justify-end">
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => openAdd(undefined)}
+            disabled={isMutating}
+          >
+            <Plus className="h-4 w-4" />
+            Agregar parada
+          </Button>
+        </div>
         {plan.stops.map((stop, index) => (
           <TimelineStop
             key={`stop-${stop.local_id}-${index}`}
             stop={stop}
             index={index}
             isLast={index === plan.stops.length - 1}
+            onRemove={() => handleRemoveStop(index + 1)}
+            onReplace={() => openReplace(index + 1)}
+            onTiming={() => openTiming(index + 1, stop)}
+            onAddAfter={() => openAdd(index + 1)}
+            isEditingDisabled={isMutating}
           />
         ))}
       </div>
@@ -201,6 +340,136 @@ export function PlanTimeline({ plan }: PlanTimelineProps) {
           </ul>
         </div>
       )}
+
+      {/* Replace Stop Dialog */}
+      <Dialog open={isReplaceDialogOpen} onOpenChange={setIsReplaceDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reemplazar parada</DialogTitle>
+            <DialogDescription>
+              Indica qué quieres en su lugar (ej. “más barato y con terraza”, “un bar de cócteles tranquilo”).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium text-gray-900">Instrucción</label>
+              <textarea
+                className="mt-1 w-full rounded-md border border-gray-200 bg-white p-2 text-sm outline-none focus:border-purple"
+                rows={3}
+                value={replaceInstruction}
+                onChange={(e) => setReplaceInstruction(e.target.value)}
+                placeholder="Ej: Cambia esta parada por algo más barato y tranquilo, cerca de la zona."
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-900">Query (opcional)</label>
+              <input
+                className="mt-1 w-full rounded-md border border-gray-200 bg-white p-2 text-sm outline-none focus:border-purple"
+                value={replaceQuery}
+                onChange={(e) => setReplaceQuery(e.target.value)}
+                placeholder="Ej: cafe, bar, tapas, brunch..."
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsReplaceDialogOpen(false)} disabled={isMutating}>
+              Cancelar
+            </Button>
+            <Button onClick={submitReplace} disabled={isMutating}>
+              {isMutating ? "Recalculando..." : "Reemplazar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Stop Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Agregar parada</DialogTitle>
+            <DialogDescription>
+              Indica qué quieres agregar (ej. “bar de cócteles”, “cafetería tranquila”, “tapas”).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium text-gray-900">Instrucción</label>
+              <textarea
+                className="mt-1 w-full rounded-md border border-gray-200 bg-white p-2 text-sm outline-none focus:border-purple"
+                rows={3}
+                value={addInstruction}
+                onChange={(e) => setAddInstruction(e.target.value)}
+                placeholder="Ej: Agrega una parada para tomar algo tranquilo cerca."
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-900">Query (opcional)</label>
+              <input
+                className="mt-1 w-full rounded-md border border-gray-200 bg-white p-2 text-sm outline-none focus:border-purple"
+                value={addQuery}
+                onChange={(e) => setAddQuery(e.target.value)}
+                placeholder="Ej: bar, cafe, tapas..."
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={isMutating}>
+              Cancelar
+            </Button>
+            <Button onClick={submitAdd} disabled={isMutating}>
+              {isMutating ? "Recalculando..." : "Agregar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Update Timing Dialog */}
+      <Dialog open={isTimingDialogOpen} onOpenChange={setIsTimingDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cambiar horario</DialogTitle>
+            <DialogDescription>
+              Ajusta la hora recomendada y la duración estimada para esta parada.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium text-gray-900">Hora (HH:MM)</label>
+              <input
+                className="mt-1 w-full rounded-md border border-gray-200 bg-white p-2 text-sm outline-none focus:border-purple"
+                value={timingStart}
+                onChange={(e) => setTimingStart(e.target.value)}
+                placeholder="20:00"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-900">Duración (min)</label>
+              <input
+                className="mt-1 w-full rounded-md border border-gray-200 bg-white p-2 text-sm outline-none focus:border-purple"
+                type="number"
+                min={15}
+                step={5}
+                value={timingDuration}
+                onChange={(e) => setTimingDuration(Number(e.target.value))}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsTimingDialogOpen(false)} disabled={isMutating}>
+              Cancelar
+            </Button>
+            <Button onClick={submitTiming} disabled={isMutating}>
+              {isMutating ? "Actualizando..." : "Guardar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -209,9 +478,23 @@ interface TimelineStopProps {
   stop: PlanStop;
   index: number;
   isLast: boolean;
+  onRemove: () => void;
+  onReplace: () => void;
+  onTiming: () => void;
+  onAddAfter: () => void;
+  isEditingDisabled: boolean;
 }
 
-function TimelineStop({ stop, index, isLast }: TimelineStopProps) {
+function TimelineStop({
+  stop,
+  index,
+  isLast,
+  onRemove,
+  onReplace,
+  onTiming,
+  onAddAfter,
+  isEditingDisabled,
+}: TimelineStopProps) {
   return (
     <div className="relative">
       {/* Vertical connector line */}
@@ -362,6 +645,44 @@ function TimelineStop({ stop, index, isLast }: TimelineStopProps) {
                     Reservar
                   </a>
                 )}
+
+                {/* Phase 6: Edit actions */}
+                <button
+                  type="button"
+                  onClick={onReplace}
+                  disabled={isEditingDisabled}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-200 disabled:opacity-60"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Reemplazar
+                </button>
+                <button
+                  type="button"
+                  onClick={onTiming}
+                  disabled={isEditingDisabled}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-200 disabled:opacity-60"
+                >
+                  <Clock className="h-3.5 w-3.5" />
+                  Horario
+                </button>
+                <button
+                  type="button"
+                  onClick={onAddAfter}
+                  disabled={isEditingDisabled}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-200 disabled:opacity-60"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Agregar después
+                </button>
+                <button
+                  type="button"
+                  onClick={onRemove}
+                  disabled={isEditingDisabled}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-200 disabled:opacity-60"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Eliminar
+                </button>
               </div>
             )}
           </div>

@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   
   const result = streamText({
     model: openai("gpt-4o-mini"),
-    messages: convertToModelMessages(messages),
+    messages: await convertToModelMessages(messages),
     system: `Eres Auphere, un asistente inteligente especializado en descubrimiento y planificación de salidas nocturnas.
     
 Tu objetivo es ayudar a los usuarios a:

@@ -3,6 +3,7 @@ import { Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/lib/providers/query-provider";
 import { Auth0ProviderWrapper } from "@/lib/providers/auth0-provider";
+import { AnalyticsProvider } from "@/lib/analytics";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
@@ -24,7 +25,9 @@ export default function RootLayout({
     <html lang="es">
       <body className={`${spaceGrotesk.variable} font-sans antialiased`}>
         <Auth0ProviderWrapper>
-          <QueryProvider>{children}</QueryProvider>
+          <AnalyticsProvider>
+            <QueryProvider>{children}</QueryProvider>
+          </AnalyticsProvider>
         </Auth0ProviderWrapper>
       </body>
     </html>

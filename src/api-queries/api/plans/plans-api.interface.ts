@@ -24,6 +24,14 @@ export interface PlanCreatePayload {
   metadata?: Record<string, unknown>;
 }
 
+export type PlanAiEdit = {
+  operation: "replace_stop" | "remove_stop" | "add_stop" | "update_timing";
+  instruction: string;
+  stop_number?: number; // 1-based
+  constraints?: Record<string, unknown>;
+  language?: string;
+};
+
 export interface CreatePlanParams {
   plan: PlanCreatePayload;
   token: string;
@@ -31,7 +39,7 @@ export interface CreatePlanParams {
 
 export interface UpdatePlanParams {
   planId: string;
-  updates: Partial<PlanCreatePayload>;
+  updates: Partial<PlanCreatePayload> & { ai_edit?: PlanAiEdit };
   token: string;
 }
 
@@ -39,4 +47,3 @@ export interface DeletePlanParams {
   planId: string;
   token: string;
 }
-

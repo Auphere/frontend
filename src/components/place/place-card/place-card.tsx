@@ -5,6 +5,7 @@ import Image from "next/image";
 import { MapPin, Star, Clock, Phone, Globe, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { usePlaceDetailQuery } from "@/api-queries/queries/places";
 
 export interface PlaceCardProps {
   place: Place;
@@ -98,6 +99,10 @@ export function PlaceDrawer({
 }: PlaceDrawerProps) {
   if (!place || !isOpen) return null;
 
+  const placeIdentifier = place.place_id || place.id;
+  const detailQuery = usePlaceDetailQuery(placeIdentifier, isOpen);
+  const detailedPlace = detailQuery.data ?? place;
+
   const getRatingColor = (rating: number) => {
     if (rating >= 4.5) return "text-green-600";
     if (rating >= 4.0) return "text-green-500";
@@ -105,9 +110,14 @@ export function PlaceDrawer({
     return "text-orange-600";
   };
 
-  const imageUrl = place.images && place.images.length > 0 
-    ? place.images[0] 
+  const imageUrl = detailedPlace.images && detailedPlace.images.length > 0
+    ? detailedPlace.images[0]
     : "/assets/place-placeholder.png";
+
+  const reviews = Array.isArray(detailedPlace.reviews) ? detailedPlace.reviews : [];
+  const tips = Array.isArray((detailedPlace as any).tips)
+    ? (detailedPlace as any).tips
+    : [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-end bg-black/50 md:items-center">
@@ -135,7 +145,7 @@ export function PlaceDrawer({
             <div className="relative aspect-video w-full overflow-hidden bg-gray-100">
               <Image
                 src={imageUrl}
-                alt={place.name}
+                alt={detailedPlace.name}
                 fill
                 className="object-cover"
               />
@@ -144,41 +154,47 @@ export function PlaceDrawer({
 
           {/* Content */}
           <ScrollArea className="flex-1 px-6 py-4">
+            {detailQuery.isFetching && (
+              <div className="mb-4 rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
+                Cargando detalle del lugar…
+              </div>
+            )}
+
             {/* Title */}
             <h2 className="mb-2 text-2xl font-bold text-gray-900">
-              {place.name}
+              {detailedPlace.name}
             </h2>
 
             {/* Category badge */}
             <span className="inline-block rounded-full bg-purple/10 px-3 py-1 text-sm font-medium text-purple">
-              {place.category}
+              {detailedPlace.category}
             </span>
 
             {/* Rating */}
-            {place.rating && (
+            {detailedPlace.rating && (
               <div className="mt-4 flex items-center gap-2">
                 <Star
-                  className={`h-5 w-5 fill-current ${getRatingColor(place.rating)}`}
+                  className={`h-5 w-5 fill-current ${getRatingColor(detailedPlace.rating)}`}
                 />
-                <span className={`text-lg font-semibold ${getRatingColor(place.rating)}`}>
-                  {place.rating.toFixed(1)}
+                <span className={`text-lg font-semibold ${getRatingColor(detailedPlace.rating)}`}>
+                  {detailedPlace.rating.toFixed(1)}
                 </span>
-                {place.reviewCount && (
+                {detailedPlace.reviewCount && (
                   <span className="text-gray-600">
-                    ({place.reviewCount} reseñas)
+                    ({detailedPlace.reviewCount} reseñas)
                   </span>
                 )}
               </div>
             )}
 
             {/* Description */}
-            {place.description && (
+            {detailedPlace.description && (
               <div className="mt-6">
                 <h3 className="mb-2 font-semibold text-gray-900">
                   Descripción
                 </h3>
                 <p className="text-gray-700 leading-relaxed">
-                  {place.description}
+                  {detailedPlace.description}
                 </p>
               </div>
             )}
@@ -188,42 +204,42 @@ export function PlaceDrawer({
               <h3 className="font-semibold text-gray-900">Información</h3>
 
               {/* Address */}
-              {place.address && (
+              {detailedPlace.address && (
                 <div className="flex items-start gap-3">
                   <MapPin className="mt-1 h-5 w-5 shrink-0 text-gray-500" />
-                  <span className="text-gray-700">{place.address}</span>
+                  <span className="text-gray-700">{detailedPlace.address}</span>
                 </div>
               )}
 
               {/* Open now */}
-              {place.openNow !== undefined && (
+              {detailedPlace.openNow !== undefined && (
                 <div className="flex items-start gap-3">
                   <Clock className="mt-1 h-5 w-5 shrink-0 text-gray-500" />
-                  <span className={place.openNow ? "text-green-600" : "text-red-600"}>
-                    {place.openNow ? "Abierto ahora" : "Cerrado"}
+                  <span className={detailedPlace.openNow ? "text-green-600" : "text-red-600"}>
+                    {detailedPlace.openNow ? "Abierto ahora" : "Cerrado"}
                   </span>
                 </div>
               )}
 
               {/* Phone */}
-              {place.phone && (
+              {detailedPlace.phone && (
                 <div className="flex items-center gap-3">
                   <Phone className="h-5 w-5 shrink-0 text-gray-500" />
                   <a
-                    href={`tel:${place.phone}`}
+                    href={`tel:${detailedPlace.phone}`}
                     className="text-purple hover:underline"
                   >
-                    {place.phone}
+                    {detailedPlace.phone}
                   </a>
                 </div>
               )}
 
               {/* Website */}
-              {place.website && (
+              {detailedPlace.website && (
                 <div className="flex items-center gap-3">
                   <Globe className="h-5 w-5 shrink-0 text-gray-500" />
                   <a
-                    href={place.website}
+                    href={detailedPlace.website}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-purple hover:underline"
@@ -235,19 +251,74 @@ export function PlaceDrawer({
             </div>
 
             {/* Vibe tags */}
-            {place.vibe && place.vibe.length > 0 && (
+            {detailedPlace.vibe && detailedPlace.vibe.length > 0 && (
               <div className="mt-6">
                 <h3 className="mb-3 font-semibold text-gray-900">
                   Ambiente
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {place.vibe.map((tag) => (
+                  {detailedPlace.vibe.map((tag) => (
                     <span
                       key={tag}
                       className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-700"
                     >
                       {tag}
                     </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Reviews */}
+            {reviews.length > 0 && (
+              <div className="mt-6">
+                <h3 className="mb-3 font-semibold text-gray-900">Reseñas</h3>
+                <div className="space-y-3">
+                  {reviews.slice(0, 5).map((r: any, idx: number) => (
+                    <div
+                      key={r?.id || r?.source_id || idx}
+                      className="rounded-lg border border-gray-200 p-3"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-sm font-medium text-gray-900">
+                          {r?.author_name || r?.author || "Usuario"}
+                        </div>
+                        {typeof r?.rating === "number" && (
+                          <div className="text-sm text-gray-700">
+                            {r.rating.toFixed(1)} ★
+                          </div>
+                        )}
+                      </div>
+                      {r?.text && (
+                        <p className="mt-2 text-sm text-gray-700 leading-relaxed">
+                          {r.text}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Tips (Foursquare) */}
+            {tips.length > 0 && (
+              <div className="mt-6">
+                <h3 className="mb-3 font-semibold text-gray-900">Tips</h3>
+                <div className="space-y-3">
+                  {tips.slice(0, 5).map((t: any, idx: number) => (
+                    <div
+                      key={t?.id || t?.source_id || idx}
+                      className="rounded-lg border border-gray-200 p-3"
+                    >
+                      <div className="text-sm font-medium text-gray-900">
+                        {t?.author || "Foursquare"}
+                      </div>
+                      {t?.text && (
+                        <p className="mt-2 text-sm text-gray-700 leading-relaxed">
+                          {t.text}
+                        </p>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
