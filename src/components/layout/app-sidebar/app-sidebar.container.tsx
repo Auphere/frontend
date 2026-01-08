@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useUIStore } from "@/lib/store";
@@ -99,7 +100,10 @@ function groupChatsByDate(chats: ChatSessionItem[]): ChatGroup[] {
   return result;
 }
 
-export function AppSidebarContainer() {
+/**
+ * Inner component that uses useSearchParams - must be wrapped in Suspense
+ */
+function AppSidebarContainerInner() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -243,5 +247,16 @@ export function AppSidebarContainer() {
       onNewChat={handleNewChat}
       onNewPlan={handleNewPlan}
     />
+  );
+}
+
+/**
+ * App Sidebar Container with Suspense boundary for useSearchParams
+ */
+export function AppSidebarContainer() {
+  return (
+    <Suspense fallback={null}>
+      <AppSidebarContainerInner />
+    </Suspense>
   );
 }

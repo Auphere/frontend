@@ -1,22 +1,31 @@
-import { Suspense } from "react";
-import { CallbackClient } from "./callback-client";
+"use client";
 
-export const dynamic = "force-dynamic";
+import { useAuth } from "@/lib/hooks/use-auth";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect } from "react";
+import Image from "next/image";
 
-export default function CallbackPage() {
-  return (
-    <Suspense fallback={<CallbackLoading />}>
-      <CallbackClient />
-    </Suspense>
-  );
-}
+export function CallbackClient() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-function CallbackLoading() {
+  useEffect(() => {
+    if (!isLoading) {
+      if (isAuthenticated) {
+        const returnTo = searchParams.get("returnTo") || "/chat";
+        router.push(returnTo);
+      } else {
+        router.push("/login");
+      }
+    }
+  }, [isAuthenticated, isLoading, router, searchParams]);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#F6F5F4]">
       <div className="text-center">
         <div className="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-primary animate-pulse">
-          <img
+          <Image
             src="/assets/icono-auphere.png"
             alt="Auphere"
             width={48}
@@ -34,3 +43,4 @@ function CallbackLoading() {
     </div>
   );
 }
+

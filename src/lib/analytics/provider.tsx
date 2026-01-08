@@ -21,7 +21,7 @@
  *   }
  */
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { analytics, trackPageView } from './posthog';
 
@@ -29,7 +29,10 @@ interface AnalyticsProviderProps {
   children: React.ReactNode;
 }
 
-export function AnalyticsProvider({ children }: AnalyticsProviderProps) {
+/**
+ * Inner component that uses useSearchParams - must be wrapped in Suspense
+ */
+function AnalyticsTracker({ children }: AnalyticsProviderProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -52,5 +55,15 @@ export function AnalyticsProvider({ children }: AnalyticsProviderProps) {
   return <>{children}</>;
 }
 
-export default AnalyticsProvider;
+/**
+ * Analytics Provider with Suspense boundary for useSearchParams
+ */
+export function AnalyticsProvider({ children }: AnalyticsProviderProps) {
+  return (
+    <Suspense fallback={<>{children}</>}>
+      <AnalyticsTracker>{children}</AnalyticsTracker>
+    </Suspense>
+  );
+}
 
+export default AnalyticsProvider;
