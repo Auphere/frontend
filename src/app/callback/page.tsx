@@ -5,6 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
 import Image from "next/image";
 
+// Force dynamic rendering to avoid static generation issues with useSearchParams
+export const dynamic = "force-dynamic";
+
 export default function CallbackPage() {
   return (
     <Suspense fallback={<CallbackLoading />}>
@@ -31,9 +34,7 @@ function CallbackInner() {
     }
   }, [isAuthenticated, isLoading, router, searchParams]);
 
-  return (
-    <CallbackLoading />
-  );
+  return <CallbackLoading />;
 }
 
 function CallbackLoading() {
@@ -59,4 +60,3 @@ function CallbackLoading() {
     </div>
   );
 }
-
