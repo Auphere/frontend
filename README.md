@@ -43,7 +43,7 @@ NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=your_mapbox_token
 # PostHog (solo producción)
 # En desarrollo usa console.log automáticamente
 # NEXT_PUBLIC_POSTHOG_API_KEY=phc_xxx
-# NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
+# NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com
 ```
 
 ### Variables de PostHog (Analytics)

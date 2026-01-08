@@ -20,7 +20,7 @@ import posthog from 'posthog-js';
 
 // Environment variables
 const POSTHOG_API_KEY = process.env.NEXT_PUBLIC_POSTHOG_API_KEY;
-const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://app.posthog.com';
+const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog.com';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 // Check if PostHog is configured for production
