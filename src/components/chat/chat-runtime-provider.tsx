@@ -136,29 +136,46 @@ async function* runAgentWithAuth(
     headers["Authorization"] = `Bearer ${accessToken}`;
   }
 
-  const response = await fetch(
-    `${DEFAULT_BACKEND_BASE.replace(/\/$/, "")}/api/v1/chat/stream`,
-    {
-      method: "POST",
-      headers,
-      body: JSON.stringify(payload),
-      signal: abortSignal,
-    }
-  );
-
-  if (!response.ok || !response.body) {
-    const errorText = await safeReadError(response);
-    throw new Error(
-      `Agent request failed (${response.status}): ${
-        errorText || "unknown error"
-      }`
-    );
+  // Listen for abort to provide immediate feedback
+  if (abortSignal) {
+    abortSignal.addEventListener('abort', () => {
+      console.log('[Chat Runtime] Abort signal received, cancelling request');
+    });
   }
 
-  let accumulated = "";
-  let lastStatus = ""; // Para mostrar el último estado mientras no hay respuesta
+  try {
+    const response = await fetch(
+      `${DEFAULT_BACKEND_BASE.replace(/\/$/, "")}/api/v1/chat/stream`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+        signal: abortSignal,
+      }
+    );
 
-  for await (const event of readSSE(response.body, abortSignal)) {
+    if (!response.ok || !response.body) {
+      const errorText = await safeReadError(response);
+      throw new Error(
+        `Agent request failed (${response.status}): ${
+          errorText || "unknown error"
+        }`
+      );
+    }
+
+    let accumulated = "";
+    let lastStatus = ""; // Para mostrar el último estado mientras no hay respuesta
+
+    for await (const event of readSSE(response.body, abortSignal)) {
+      // Check abort early and often
+      if (abortSignal?.aborted) {
+        console.log('[Chat Runtime] Abort detected, stopping SSE read');
+        // Yield final cancellation message and exit
+        yield {
+          content: [{ type: "text" as const, text: "❌ Operación cancelada" }],
+        };
+        return;
+      }
     if (event.type === "error") {
       throw new Error(event.data?.content || "Error del agente");
     }
@@ -272,22 +289,36 @@ async function* runAgentWithAuth(
     }
   }
 
-  // Si no hubo evento "end", devolver lo acumulado
-  if (accumulated) {
-    yield {
-      content: [{ type: "text" as const, text: accumulated }],
-    };
-  } else if (lastStatus) {
-    // Si solo hubo status pero no respuesta, mostrar el último status
-    yield {
-      content: [{ type: "text" as const, text: `*${lastStatus}*` }],
-    };
-  } else {
-    yield {
-      content: [
-        { type: "text" as const, text: "No recibí respuesta del agente." },
-      ],
-    };
+    // Si no hubo evento "end", devolver lo acumulado
+    if (accumulated) {
+      yield {
+        content: [{ type: "text" as const, text: accumulated }],
+      };
+    } else if (lastStatus) {
+      // Si solo hubo status pero no respuesta, mostrar el último status
+      yield {
+        content: [{ type: "text" as const, text: `*${lastStatus}*` }],
+      };
+    } else {
+      yield {
+        content: [
+          { type: "text" as const, text: "No recibí respuesta del agente." },
+        ],
+      };
+    }
+  } catch (error: any) {
+    // Handle abort errors gracefully
+    if (error.name === 'AbortError' || abortSignal?.aborted) {
+      console.log('[Chat Runtime] Request aborted by user');
+      yield {
+        content: [
+          { type: "text" as const, text: "❌ Operación cancelada" },
+        ],
+      };
+      return;
+    }
+    // Re-throw other errors
+    throw error;
   }
 }
 
@@ -305,6 +336,12 @@ async function* readSSE(
   let buffer = "";
 
   while (true) {
+    // Check abort at the start of each loop iteration
+    if (abortSignal?.aborted) {
+      reader.cancel();
+      return;
+    }
+
     const { done, value } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
