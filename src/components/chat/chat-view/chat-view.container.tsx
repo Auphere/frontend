@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { useChatHistory } from "@/api-queries/queries/chats.queries";
 import { useUIStore } from "@/lib/store/ui-store";
 import type { ChatMode } from "@/lib/types";
+import { trackEvent } from "@/lib/analytics";
 
 /**
  * Inner component that uses useSearchParams - must be wrapped in Suspense
@@ -29,12 +30,20 @@ function ChatViewContainerInner() {
 
   useEffect(() => {
     if (chatHistory && chatHistory.messages) {
-      console.log("Loaded chat history:", chatHistory);
-      // The history will be loaded into the runtime provider
+      trackEvent("chat_history_loaded", {
+        sessionId: sessionId,
+        chatHistory: chatHistory.messages,
+      });
     }
   }, [chatHistory]);
 
-  return <ChatView sessionId={sessionId} chatHistory={chatHistory} isLoading={isLoading} />;
+  return (
+    <ChatView
+      sessionId={sessionId}
+      chatHistory={chatHistory}
+      isLoading={isLoading}
+    />
+  );
 }
 
 /**

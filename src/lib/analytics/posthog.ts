@@ -1,36 +1,37 @@
 /**
  * PostHog Analytics Client for Auphere Frontend
- * 
+ *
  * Environment modes:
  * - Development: Console logging only (no PostHog)
  * - Production: PostHog Cloud tracking
- * 
+ *
  * Handles:
  * - PostHog initialization
  * - User identification
  * - Event tracking
  * - Feature flag checking
- * 
+ *
  * Usage:
  *   import { analytics, trackEvent } from '@/lib/analytics/posthog';
  *   trackEvent('plan_saved', { plan_id: '123', city: 'Madrid' });
  */
 
-import posthog from 'posthog-js';
+import posthog from "posthog-js";
 
 // Environment variables
-const POSTHOG_API_KEY = process.env.NEXT_PUBLIC_POSTHOG_API_KEY;
-const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog.com';
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_API_KEY;
+const POSTHOG_HOST =
+  process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://eu.i.posthog.com";
+const IS_PRODUCTION = process.env.NEXT_PUBLIC_ENVIRONMENT === "production";
 
 // Check if PostHog is configured for production
 const isPostHogEnabled = (): boolean => {
-  return typeof window !== 'undefined' && IS_PRODUCTION && !!POSTHOG_API_KEY;
+  return typeof window !== "undefined" && IS_PRODUCTION && !!POSTHOG_KEY;
 };
 
 // Check if we're in development mode
 const isDevelopment = (): boolean => {
-  return typeof window !== 'undefined' && !IS_PRODUCTION;
+  return typeof window !== "undefined" && !IS_PRODUCTION;
 };
 
 // Track if PostHog has been initialized
@@ -39,7 +40,10 @@ let isInitialized = false;
 /**
  * Log event to console in development mode
  */
-function logEventLocal(eventName: string, properties?: Record<string, unknown>): void {
+function logEventLocal(
+  eventName: string,
+  properties?: Record<string, unknown>
+): void {
   if (isDevelopment()) {
     console.log(`[Analytics Event] ${eventName}`, properties || {});
   }
@@ -51,13 +55,15 @@ function logEventLocal(eventName: string, properties?: Record<string, unknown>):
  */
 export function initPostHog(): void {
   if (isDevelopment()) {
-    console.log('[Analytics] Development mode - console logging enabled');
+    console.log("[Analytics] Development mode - console logging enabled");
     isInitialized = true;
     return;
   }
 
   if (!isPostHogEnabled()) {
-    console.warn('[Analytics] PostHog not configured - NEXT_PUBLIC_POSTHOG_API_KEY missing');
+    console.warn(
+      "[Analytics] PostHog not configured - NEXT_PUBLIC_POSTHOG_API_KEY missing"
+    );
     return;
   }
 
@@ -65,7 +71,7 @@ export function initPostHog(): void {
     return;
   }
 
-  posthog.init(POSTHOG_API_KEY!, {
+  posthog.init(POSTHOG_KEY!, {
     api_host: POSTHOG_HOST,
     // Capture pageviews automatically
     capture_pageview: true,
@@ -76,7 +82,7 @@ export function initPostHog(): void {
     // Session recording (optional - disable for privacy)
     disable_session_recording: false,
     // Persistence
-    persistence: 'localStorage+cookie',
+    persistence: "localStorage+cookie",
     // Bootstrap (for faster initial load)
     bootstrap: {
       distinctID: undefined,
@@ -84,7 +90,7 @@ export function initPostHog(): void {
     },
     // Loaded callback
     loaded: (posthog) => {
-      console.log('[Analytics] PostHog loaded', posthog.get_distinct_id());
+      console.log("[Analytics] PostHog loaded", posthog.get_distinct_id());
     },
   });
 
@@ -112,7 +118,7 @@ export function identifyUser(
  */
 export function resetUser(): void {
   if (isDevelopment()) {
-    console.log('[Analytics] User reset');
+    console.log("[Analytics] User reset");
     return;
   }
 
@@ -125,7 +131,7 @@ export function resetUser(): void {
  */
 export function setUserProperties(properties: Record<string, unknown>): void {
   if (isDevelopment()) {
-    console.log('[Analytics Set Props]', properties);
+    console.log("[Analytics Set Props]", properties);
     return;
   }
 
@@ -155,15 +161,16 @@ export function trackEvent(
  * Track page view (usually automatic, but can be manual for SPAs)
  */
 export function trackPageView(path?: string): void {
-  const currentUrl = path || (typeof window !== 'undefined' ? window.location.href : '');
-  
+  const currentUrl =
+    path || (typeof window !== "undefined" ? window.location.href : "");
+
   if (isDevelopment()) {
     console.log(`[Analytics PageView] ${currentUrl}`);
     return;
   }
 
   if (!isPostHogEnabled()) return;
-  posthog.capture('$pageview', {
+  posthog.capture("$pageview", {
     $current_url: currentUrl,
   });
 }
@@ -194,9 +201,9 @@ export function getFeatureFlag<T = unknown>(flagKey: string): T | undefined {
 export function trackChatMessage(properties: {
   sessionId: string;
   messageLength: number;
-  chatMode: 'explore' | 'plan';
+  chatMode: "explore" | "plan";
 }): void {
-  trackEvent('chat_message_sent', properties);
+  trackEvent("chat_message_sent", properties);
 }
 
 /**
@@ -204,9 +211,9 @@ export function trackChatMessage(properties: {
  */
 export function trackPlanViewed(properties: {
   planId: string;
-  source: 'search' | 'saved' | 'shared';
+  source: "search" | "saved" | "shared";
 }): void {
-  trackEvent('plan_viewed', properties);
+  trackEvent("plan_viewed", properties);
 }
 
 /**
@@ -218,7 +225,7 @@ export function trackPlanSaved(properties: {
   city: string;
   vibes?: string[];
 }): void {
-  trackEvent('plan_saved', properties);
+  trackEvent("plan_saved", properties);
 }
 
 /**
@@ -226,9 +233,9 @@ export function trackPlanSaved(properties: {
  */
 export function trackPlanShared(properties: {
   planId: string;
-  shareMethod: 'link' | 'whatsapp' | 'email' | 'copy';
+  shareMethod: "link" | "whatsapp" | "email" | "copy";
 }): void {
-  trackEvent('plan_shared', properties);
+  trackEvent("plan_shared", properties);
 }
 
 /**
@@ -239,7 +246,7 @@ export function trackStopExpanded(properties: {
   stopIndex: number;
   placeId: string;
 }): void {
-  trackEvent('stop_expanded', properties);
+  trackEvent("stop_expanded", properties);
 }
 
 /**
@@ -247,9 +254,9 @@ export function trackStopExpanded(properties: {
  */
 export function trackMapsClicked(properties: {
   placeId: string;
-  context: 'plan' | 'search' | 'detail';
+  context: "plan" | "search" | "detail";
 }): void {
-  trackEvent('maps_clicked', properties);
+  trackEvent("maps_clicked", properties);
 }
 
 /**
@@ -260,7 +267,7 @@ export function trackStopRemoved(properties: {
   stopIndex: number;
   reason?: string;
 }): void {
-  trackEvent('stop_removed', properties);
+  trackEvent("stop_removed", properties);
 }
 
 /**
@@ -272,7 +279,7 @@ export function trackStopReplaced(properties: {
   oldPlaceId: string;
   newPlaceId: string;
 }): void {
-  trackEvent('stop_replaced', properties);
+  trackEvent("stop_replaced", properties);
 }
 
 /**
@@ -282,7 +289,7 @@ export function trackLanguageDetected(properties: {
   detectedLang: string;
   isSupported: boolean;
 }): void {
-  trackEvent('language_detected', properties);
+  trackEvent("language_detected", properties);
 }
 
 // Export PostHog instance for advanced usage

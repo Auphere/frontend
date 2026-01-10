@@ -30,28 +30,28 @@ Crea `.env.local`:
 
 ```env
 # Auth0
-NEXT_PUBLIC_AUTH0_DOMAIN=your-tenant.auth0.com
-NEXT_PUBLIC_AUTH0_CLIENT_ID=your_client_id
+AUTH0_DOMAIN=your-tenant.auth0.com
+AUTH0_CLIENT_ID=your_client_id
 NEXT_PUBLIC_AUTH0_AUDIENCE=https://auphere-api
 
 # API
 NEXT_PUBLIC_API_URL=http://localhost:8000
 
 # Mapbox
-NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=your_mapbox_token
+MAPBOX_ACCESS_TOKEN=your_mapbox_token
 
 # PostHog (solo producción)
 # En desarrollo usa console.log automáticamente
-# NEXT_PUBLIC_POSTHOG_API_KEY=phc_xxx
-# NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com
+# POSTHOG_API_KEY=phc_xxx
+# POSTHOG_HOST=https://eu.i.posthog.com
 ```
 
 ### Variables de PostHog (Analytics)
 
-| Variable | Descripción | Requerido |
-|----------|-------------|-----------|
-| `NEXT_PUBLIC_POSTHOG_API_KEY` | Project API Key (solo producción) | ⚠️ |
-| `NEXT_PUBLIC_POSTHOG_HOST` | Host de PostHog | ⚠️ |
+| Variable                      | Descripción                       | Requerido |
+| ----------------------------- | --------------------------------- | --------- |
+| `NEXT_PUBLIC_POSTHOG_API_KEY` | Project API Key (solo producción) | ⚠️        |
+| `NEXT_PUBLIC_POSTHOG_HOST`    | Host de PostHog                   | ⚠️        |
 
 > **Nota:** En desarrollo (`NODE_ENV=development`), PostHog usa console logging. En producción, envía a PostHog Cloud.
 
@@ -103,13 +103,14 @@ auphere-frontend-next/
 El deploy se realiza automáticamente via GitHub Actions → AWS Amplify.
 
 Variables de entorno en Amplify Console:
-- `NEXT_PUBLIC_AUTH0_DOMAIN`
-- `NEXT_PUBLIC_AUTH0_CLIENT_ID`
+
+- `AUTH0_DOMAIN`
+- `AUTH0_CLIENT_ID`
 - `NEXT_PUBLIC_AUTH0_AUDIENCE`
 - `NEXT_PUBLIC_API_URL`
-- `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN`
-- `NEXT_PUBLIC_POSTHOG_API_KEY`
-- `NEXT_PUBLIC_POSTHOG_HOST`
+- `MAPBOX_ACCESS_TOKEN`
+- `POSTHOG_API_KEY`
+- `POSTHOG_HOST`
 
 ### Vercel (alternativa)
 

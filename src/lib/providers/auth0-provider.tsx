@@ -8,9 +8,7 @@ interface Auth0ProviderWrapperProps {
   children: ReactNode;
 }
 
-export function Auth0ProviderWrapper({
-  children,
-}: Auth0ProviderWrapperProps) {
+export function Auth0ProviderWrapper({ children }: Auth0ProviderWrapperProps) {
   const router = useRouter();
 
   const domain = process.env.NEXT_PUBLIC_AUTH0_DOMAIN!;
@@ -27,7 +25,7 @@ export function Auth0ProviderWrapper({
   // If Auth0 is not configured, render children without auth
   if (!domain || !clientId) {
     console.warn(
-      "Auth0 not configured. Set NEXT_PUBLIC_AUTH0_DOMAIN and NEXT_PUBLIC_AUTH0_CLIENT_ID in .env.local"
+      "Auth0 not configured. Set AUTH0_DOMAIN and AUTH0_CLIENT_ID in .env.local"
     );
     return <>{children}</>;
   }
@@ -48,4 +46,3 @@ export function Auth0ProviderWrapper({
     </Auth0Provider>
   );
 }
-

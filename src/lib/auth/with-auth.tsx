@@ -7,7 +7,7 @@ import { useEffect, ComponentType } from "react";
 /**
  * Higher-order component to protect routes that require authentication.
  * Redirects to /login if user is not authenticated.
- * 
+ *
  * IMPORTANTE: Este HOC crea un Client Component wrapper.
  * Se debe usar exportando como default en las páginas.
  */
@@ -50,9 +50,9 @@ export function withAuth<P extends object>(
     return <Component {...props} />;
   };
 
-  ProtectedRoute.displayName = `withAuth(${Component.displayName || Component.name || "Component"})`;
+  ProtectedRoute.displayName = `withAuth(${
+    Component.displayName || Component.name || "Component"
+  })`;
 
   return ProtectedRoute;
 }
-
-
