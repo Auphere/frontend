@@ -8,11 +8,13 @@ import {
   type ChatModelRunResult,
 } from "@assistant-ui/react";
 import type { ReactNode } from "react";
+import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/hooks/use-auth";
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState } from "react";
 import type { ChatHistoryResponse } from "@/api-queries/types/chats.types";
 import { useUIStore } from "@/lib/store/ui-store";
 import type { ChatMode } from "@/lib/types";
+import { chatsKeys } from "@/api-queries/keys/chats.keys";
 
 interface ChatRuntimeProviderProps {
   children: ReactNode;
@@ -31,6 +33,13 @@ export function ChatRuntimeProvider({
   initialHistory 
 }: ChatRuntimeProviderProps) {
   const { user, getAccessToken, isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
+
+  const handleSessionResolved = (newSessionId: string) => {
+    if (!newSessionId) return;
+
+    setSessionId(newSessionId);
+  };
 
   // Set session ID when component mounts or when external sessionId changes
   useEffect(() => {
@@ -58,26 +67,37 @@ export function ChatRuntimeProvider({
           user?.sub,
           getAccessToken,
           isAuthenticated,
-          currentChatMode
+          currentChatMode,
+          queryClient,
+          handleSessionResolved
         );
       },
     }),
-    [user?.sub, getAccessToken, isAuthenticated]
+    [user?.sub, getAccessToken, isAuthenticated, queryClient, handleSessionResolved]
   );
 
   const runtime = useLocalRuntime(agentModelAdapter, {
-    initialMessages: initialHistory?.messages?.map((msg, index) => ({
-      id: `${initialHistory.chat_id}-msg-${index}`,
-      role: msg.role,
-      content: [{ type: "text" as const, text: msg.content }],
-      createdAt: new Date(),
-      metadata: {
-        custom: {
-          places: msg.places ?? [],
-          plan: msg.plan ?? null,
+    initialMessages: initialHistory?.messages?.map((msg, index) => {
+      console.log(`Loading message ${index}:`, msg.role, msg.content.substring(0, 50));
+      return {
+        id: `${initialHistory.chat_id}-msg-${index}`,
+        role: msg.role,
+        content: [{ type: "text" as const, text: msg.content }],
+        createdAt: new Date(),
+        metadata: {
+          custom: {
+            places: msg.places ?? [],
+            plan: msg.plan ?? null,
+          },
         },
-      },
-    })) || [],
+      };
+    }) || [],
+  });
+
+  console.log('ChatRuntimeProvider initialized with', {
+    sessionId: externalSessionId,
+    messageCount: initialHistory?.messages?.length ?? 0,
+    hasHistory: !!initialHistory
   });
 
   return (
@@ -91,7 +111,9 @@ async function* runAgentWithAuth(
   userId: string | undefined,
   getAccessToken: () => Promise<string | null>,
   isAuthenticated: boolean,
-  chatMode: ChatMode
+  chatMode: ChatMode,
+  queryClient: QueryClient,
+  onSessionResolved: (sessionId: string) => void
 ): AsyncGenerator<ChatModelRunResult> {
   const lastUserMessage = [...messages]
     .reverse()
@@ -112,6 +134,7 @@ async function* runAgentWithAuth(
   }
 
   const sessionId = getSessionId();
+  onSessionResolved(sessionId);
 
   // Use Auth0 user ID if authenticated, otherwise use default
   const effectiveUserId = userId || DEFAULT_USER_ID;
@@ -157,6 +180,17 @@ async function* runAgentWithAuth(
 
   let accumulated = "";
   let lastStatus = ""; // Para mostrar el último estado mientras no hay respuesta
+  let hasInvalidatedChats = false;
+
+  const invalidateChatsList = async () => {
+    if (hasInvalidatedChats) return;
+    hasInvalidatedChats = true;
+    try {
+      await queryClient.invalidateQueries({ queryKey: chatsKeys.lists() });
+    } catch (err) {
+      console.warn("No se pudo refrescar la lista de chats", err);
+    }
+  };
 
   for await (const event of readSSE(response.body, abortSignal)) {
     if (event.type === "error") {
@@ -254,6 +288,8 @@ async function* runAgentWithAuth(
     if (event.type === "end") {
       const text = event.data?.content || accumulated;
       const places = event.data?.places ?? [];
+      const sessionFromEvent =
+        event.data?.metadata?.session_id || event.data?.session_id;
 
       console.log("SSE END event data:", event.data);
       console.log("Extracted places:", places);
@@ -268,6 +304,22 @@ async function* runAgentWithAuth(
           } 
         },
       };
+      if (sessionFromEvent) {
+        onSessionResolved(sessionFromEvent);
+      }
+      await invalidateChatsList();
+      
+      if (sessionFromEvent && typeof window !== "undefined") {
+        try {
+          const url = new URL(window.location.href);
+          if (!url.searchParams.get("session")) {
+            url.searchParams.set("session", sessionFromEvent);
+            window.history.replaceState(window.history.state, "", url.toString());
+          }
+        } catch (err) {
+          console.warn("No se pudo actualizar la URL", err);
+        }
+      }
       return;
     }
   }
@@ -289,6 +341,8 @@ async function* runAgentWithAuth(
       ],
     };
   }
+
+  await invalidateChatsList();
 }
 
 type SSEEvent = {

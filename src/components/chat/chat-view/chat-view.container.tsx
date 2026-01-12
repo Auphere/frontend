@@ -34,7 +34,9 @@ function ChatViewContainerInner() {
     }
   }, [chatHistory]);
 
-  return <ChatView sessionId={sessionId} chatHistory={chatHistory} isLoading={isLoading} />;
+  const viewKey = sessionId || `new-${Date.now()}`;
+
+  return <ChatView key={viewKey} sessionId={sessionId} chatHistory={chatHistory} isLoading={isLoading} />;
 }
 
 /**
